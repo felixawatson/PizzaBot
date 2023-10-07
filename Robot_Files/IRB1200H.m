@@ -1,5 +1,5 @@
 classdef IRB1200H < RobotBaseClass
-    %% UR3 Universal Robot 3kg payload robot model
+    %% IRB1200-5 robot
     %
     % WARNING: This model has been created by UTS students in the subject
     % 41013. No guarentee is made about the accuracy or correctness of the
@@ -39,14 +39,13 @@ classdef IRB1200H < RobotBaseClass
 
 %% CreateModel
         function CreateModel(self)
-            link(1) = Link('d',0.2,'a',0,'alpha',pi/2,'qlim',deg2rad([-170 170]), 'offset',0);
-            link(2) = Link('d',0,'a',0.45,'alpha',0,'qlim',deg2rad([-100 135]), 'offset',0);
-            link(3) = Link('d',0,'a',0.45,'alpha',0,'qlim',deg2rad([-200 70]), 'offset',0);
-            link(4) = Link('d',0.451,'a',0,'alpha',pi/2,'qlim',deg2rad([-270 270]), 'offset',0);
-            link(5) = Link('d',0,'a',0,'alpha',-pi/2,'qlim',deg2rad([-128 128]), 'offset',0);
-            link(6) = Link('d',0,'a',0.09,'alpha',0,'qlim',deg2rad([-400 400]), 'offset',0);
+            link(1) = Link('alpha',pi/2,'a',0, 'd',0.1, 'offset',pi,'qlim',[deg2rad(-170), deg2rad(170)] );
+            link(2) = Link('alpha',0,'a',0.448, 'd',0, 'offset',pi/2,'qlim',[deg2rad(-120), deg2rad(120)]);
+            link(3) = Link('alpha',-pi/2,'a',0.042, 'd',0, 'offset',0,'qlim',[deg2rad(-125), deg2rad(155)]);
+            link(4) = Link('alpha',pi/2,'a',0, 'd',0.451, 'offset',0,'qlim',[deg2rad(-270), deg2rad(270)]);
+            link(5) = Link('alpha',-pi/2,'a',0, 'd',0, 'offset',pi/2,'qlim',[deg2rad(-120), deg2rad(120)]);
+            link(6) = Link('alpha',0,'a',0, 'd',0.082, 'offset',0,'qlim',[deg2rad(-360), deg2rad(360)]);
             self.model = SerialLink(link,'name',self.name);
-	    %link 3 or 4 not currently working
         end      
     end
 end
