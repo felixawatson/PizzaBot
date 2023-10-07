@@ -46,6 +46,7 @@ classdef IRB1200H < RobotBaseClass
             link(5) = Link('d',0,'a',0,'alpha',-pi/2,'qlim',deg2rad([-128 128]), 'offset',0);
             link(6) = Link('d',0,'a',0.09,'alpha',0,'qlim',deg2rad([-400 400]), 'offset',0);
             self.model = SerialLink(link,'name',self.name);
+	    %link 3 or 4 not currently working
         end      
     end
 end
