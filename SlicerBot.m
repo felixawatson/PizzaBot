@@ -3,7 +3,8 @@ classdef SlicerBot < handle
     % uses visual servoing to detect when a pizza is in front of it and
     % cut it into 8 equal slices
 
-    properties
+    properties (Constant)
+        r = UR3;
     end
 
     methods
@@ -11,17 +12,19 @@ classdef SlicerBot < handle
         function self = SlicerBot()
             %create a UR3 with a pizza slicer attachment
         end
-        
+    end
+
+    methods (Static)
         % use RGB-D camera to detect the pizza [BONUS]
-        function DetectPizza(self)
+        function DetectPizza()
         end
 
         % calculate cut based on pizza position
-        function CalculateCut(self)
+        function CalculateCut()
         end
 
         % step through slicing procedure
-        function stepSlicing(self)
+        function stepSlicing()
         end
     end
 end
