@@ -6,14 +6,14 @@ home = [0 0 pi/2 0 0 0];
 IRB.model.teach();
 IRB.model.animate(home);
 %%
-step = 50;
+step = 100;
 distance = 0.1;
 
 q1 = IRB.model.getpos;
 tf = IRB.model.fkine(q1).T;
 jog = tf;
 
-direction = '+x';
+direction = '-x';
 
 switch direction
     case '-x'

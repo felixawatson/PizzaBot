@@ -23,6 +23,8 @@ classdef ChefBot < handle
             IRB.model.animate(home);
             
             self.JogRobot(IRB,'+x');
+            pause;
+            
         end
 
         % collision avoidance
