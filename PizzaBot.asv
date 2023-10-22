@@ -1,4 +1,4 @@
-classdef margherita < handle
+classdef PizzaBot < handle
     %ROBOTPIZZAS A class that creates a herd of robot PIZZAS
 	%   The pizzas can be moved around randomly. It is then possible to query
     %   the current location (base) of the pizza.    
@@ -26,7 +26,7 @@ classdef margherita < handle
     
     methods
         %% ...structors
-        function self = margherita (pizzaCount,basePose)
+        function self = PizzaBot(pizzaCount,basePose)
             if 0 < nargin
                 self.pizzaCount = pizzaCount;
             end
@@ -37,7 +37,7 @@ classdef margherita < handle
 
             % Create the required number of cows
             for i = 1:self.pizzaCount
-                self.pizzaModel{i} = self.GetpizzaModel(['brick',num2str(i)]);
+                self.pizzaModel{i} = self.GetpizzaModel(['Pizza',num2str(i)]);
                 self.pizzaModel{i}.base = transl(basePose(i,:)) * trotx(-pi/2);
                 
                 % Plot 3D model
@@ -47,11 +47,6 @@ classdef margherita < handle
                     hold on;
                 end
             end
-
-            % axis equal
-            % if isempty(findobj(get(gca,'Children'),'Type','Light'))
-            %     camlight
-            % end 
         end
         
         function delete(self)

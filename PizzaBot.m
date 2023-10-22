@@ -1,4 +1,4 @@
-classdef hawaiian < handle
+classdef PizzaBot < handle
     %ROBOTPIZZAS A class that creates a herd of robot PIZZAS
 	%   The pizzas can be moved around randomly. It is then possible to query
     %   the current location (base) of the pizza.    
@@ -26,7 +26,7 @@ classdef hawaiian < handle
     
     methods
         %% ...structors
-        function self = hawaiian(pizzaCount,basePose)
+        function self = PizzaBot(pizzaCount,basePose,name)
             if 0 < nargin
                 self.pizzaCount = pizzaCount;
             end
@@ -37,7 +37,7 @@ classdef hawaiian < handle
 
             % Create the required number of cows
             for i = 1:self.pizzaCount
-                self.pizzaModel{i} = self.GetpizzaModel(['Pizza',num2str(i)]);
+                self.pizzaModel{i} = self.GetpizzaModel([name,num2str(i)]);
                 self.pizzaModel{i}.base = transl(basePose(i,:)) * trotx(-pi/2);
                 
                 % Plot 3D model
@@ -47,11 +47,6 @@ classdef hawaiian < handle
                     hold on;
                 end
             end
-
-            % axis equal
-            % if isempty(findobj(get(gca,'Children'),'Type','Light'))
-            %     camlight
-            % end 
         end
         
         function delete(self)
@@ -124,7 +119,18 @@ classdef hawaiian < handle
             if nargin < 1
                 name = 'Pizza';
             end
-            [faceData,vertexData] = plyread('BigSausagePizza.ply','tri'); %change ply once files are made
+            
+            switch name
+                case 'margherita'
+                    [faceData,vertexData] = plyread('BigSausagePizza.ply','tri'); 
+                case 'hawaiian'
+                    [faceData,vertexData] = plyread('BigSausagePizza.ply','tri'); 
+                case 'pepperoni'
+                    [faceData,vertexData] = plyread('BigSausagePizza.ply','tri'); 
+                case 'four cheeses'
+                    [faceData,vertexData] = plyread('BigSausagePizza.ply','tri'); 
+            end
+
             link1 = Link('alpha',pi/2,'a',0,'d',0,'offset',0);
             model = SerialLink(link1,'name',name);
             
