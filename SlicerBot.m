@@ -5,6 +5,7 @@ classdef SlicerBot < handle
 
     properties (Constant)
         robot = UR3;
+        step = 50;
     end
 
     methods
