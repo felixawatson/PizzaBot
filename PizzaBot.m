@@ -26,7 +26,7 @@ classdef PizzaBot < handle
     
     methods
         %% ...structors
-        function self = PizzaBot(pizzaCount,basePose,name)
+        function self = PizzaBot(name,pizzaCount,basePose)
             if 0 < nargin
                 self.pizzaCount = pizzaCount;
             end
@@ -59,77 +59,27 @@ classdef PizzaBot < handle
                 try delete(h); end
                 try delete(handles); end
             end
-        end       
-        
-        %% PlotSingleRandomStep
-        % Move each of the cows forward and rotate some rotate value around
-        % the z axis
-        function PlotSingleRandomStep(self)
-            for cowIndex = 1:self.pizzaCount
-                % Move Forward
-                self.pizzaCount{cowIndex}.base = self.pizzaCount{cowIndex}.base * SE3(SE2(0.2, 0, 0));
-                animate(self.pizzaCount{cowIndex},0);
-                
-                % Turn randomly
-                % Save base as a temp variable
-                tempBase = self.pizzaModel{cowIndex}.base.T;
-                rotBase = tempBase(1:3, 1:3);
-                posBase = tempBase(1:3, 4);
-                newRotBase = rotBase * rotz((rand-0.5) * 30 * pi/180);
-                newBase = [newRotBase posBase ; zeros(1,3) 1];
-                           
-                % Update base pose
-                self.pizzaModel{cowIndex}.base = newBase;
-                animate(self.pizzaModel{cowIndex},0);                
-
-                % If outside workspace rotate back around
-                % Get base as temp
-                tempBase = self.pizzaModel{cowIndex}.base.T;
-                
-                if tempBase(1,4) < self.workspaceDimensions(1) ...
-                || self.workspaceDimensions(2) < tempBase(1,4) ...
-                || tempBase(2,4) < self.workspaceDimensions(3) ...
-                || self.workspaceDimensions(4) < tempBase(2,4)
-                    self.pizzaModel{cowIndex}.base = self.pizzaModel{cowIndex}.base * SE3(SE2(-0.2, 0, 0)) * SE3(SE2(0, 0, pi));
-                end
-            end
-            % Do the drawing once for each interation for speed
-            drawnow();
-        end    
-        
-        %% TestPlotManyStep
-        % Go through and plot many random walk steps
-        function TestPlotManyStep(self,numSteps,delay)
-            if nargin < 3
-                delay = 0;
-                if nargin < 2
-                    numSteps = 200;
-                end
-            end
-            for i = 1:numSteps
-                self.PlotSingleRandomStep();
-                pause(delay);
-            end
-        end
+        end         
     end
     
     methods (Static)
         %% GetCowModel
         function model = GetpizzaModel(name)
             if nargin < 1
-                name = 'Pizza';
+                name = 'base';
             end
-            
-            switch name
-                case 'margherita'
-                    [faceData,vertexData] = plyread('BigSausagePizza.ply','tri'); 
-                case 'hawaiian'
-                    [faceData,vertexData] = plyread('BigSausagePizza.ply','tri'); 
-                case 'pepperoni'
-                    [faceData,vertexData] = plyread('BigSausagePizza.ply','tri'); 
-                case 'four cheeses'
-                    [faceData,vertexData] = plyread('BigSausagePizza.ply','tri'); 
-            end
+            % switch name
+            %     case 'base'
+            %         [faceData,vertexData] = plyread('base.ply','tri');
+            %     case 'margherita'
+            %         [faceData,vertexData] = plyread('margherita.ply','tri'); 
+            %     case 'hawaiian'
+            %         [faceData,vertexData] = plyread('pepperoni.ply','tri'); 
+            %     case 'pepperoni'
+            %         [faceData,vertexData] = plyread('hawaiian.ply','tri'); 
+            %     case 'four cheeses'
+                    [faceData,vertexData] = plyread('fourcheeses.ply','tri'); 
+            % end
 
             link1 = Link('alpha',pi/2,'a',0,'d',0,'offset',0);
             model = SerialLink(link1,'name',name);
