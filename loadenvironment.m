@@ -3,21 +3,19 @@ close all
 clc
 
 hold on
-axis equal
+
+axis = [-5 5 -5 5 0 4];
 
 %loading the ground texture
-surf([-5,-5;5,5]...
-,[-4,4;-4,4]...
-,[0,0;0,0]...
-,'CData',imread('floor.png') ...
-,'FaceColor','texturemap');
+surf([axis(1),axis(1);axis(2),axis(2)], [axis(3),axis(4);axis(3),axis(4)], repmat(axis(5),2,2), ...
+    'CData', imread("floor.png"),'FaceColor','texturemap');
 
 %loading walls
 
 %loading kitchen
 counter = PlaceObject('bigcounterwithwall.ply', [0,0,0]);
-counter2 = PlaceObject('bigcounter.ply', [0,-1.1,0]);
-counter3 = PlaceObject('bigcounter.ply', [0,-2.2,0]);
+%counter2 = PlaceObject('bigcounter(broken).ply', [0,-1.1,0]);
+%counter3 = PlaceObject('bigcounter(broken).ply', [0,-2.2,0]);
 
 dispenser1 = PlaceObject('dispenser.PLY', [-1.5,1.25,1.5]);
 dispenser2 = PlaceObject('dispenser.PLY', [-1.1,1.25,1.5]);
