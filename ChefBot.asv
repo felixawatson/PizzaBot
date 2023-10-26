@@ -9,6 +9,7 @@ classdef ChefBot < handle
 
     properties (Constant)
         robot = IRB1200H; 
+        step = 50;
         home = [0 0 pi/2 0 0 0];
     end
 
@@ -16,9 +17,7 @@ classdef ChefBot < handle
         % constructor
         function self = ChefBot()
             % create IRB1200 with gripper
-            home = self.home;
-            IRB = IRB1200h;
-            IRB.model.animate(home);
+
         end
 
         % collision avoidance
@@ -44,11 +43,10 @@ classdef ChefBot < handle
         % close gripper
         function CloseGripper(self)
         end
-    end
-    methods (Static)
+
         % joint movement path
         function JointMove(robot, gripper, transform)
-            steps = 100;
+            steps = self.step;
             q1 = robot.model.getpos;
             q2 = robot.model.ikcon(transform); 
             qMatrix = jtraj(q1,q2,steps);    
@@ -65,7 +63,7 @@ classdef ChefBot < handle
         
         % cartesian movement path (not tested)
         function CartesianMove(self,gripper, transform)
-            steps = 100;
+            steps = self.step;
             tf1 = self.robot.model.getpos.T;
             q1 = self.robot.model.getpos;
             tfMatrix = ctraj(tf1,transform,steps);    
