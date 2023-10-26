@@ -10,6 +10,7 @@ classdef ChefBot < handle
     properties (Constant)
         robot = IRB1200H; 
         step = 50;
+        home = [0 0 pi/2 0 0 0];
     end
 
     methods
