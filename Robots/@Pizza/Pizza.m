@@ -16,7 +16,7 @@ classdef Pizza < RobotBaseClass
             self.plyFileNameStem = toppings;
             end 
             self.CreateModel();
-            self.model.base = self.model.base.T * transl(baseTr);
+            self.model.base = self.model.base.T * baseTr;
             self.PlotAndColourRobot();
         end
 

@@ -66,8 +66,8 @@ classdef ChefBot < handle
         % cartesian movement path (not tested)
         function CartesianMove(self,gripper, transform)
             steps = 100;
-            tf1 = self.robot.model.getpos.T;
-            q1 = self.robot.model.getpos;
+            q1 = self.robot.model.getpos;            
+            tf1 = self.robot.model.fkine(q1).T;
             tfMatrix = ctraj(tf1,transform,steps);    
             
             for i = 1:steps
