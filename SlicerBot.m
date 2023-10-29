@@ -3,8 +3,8 @@ classdef SlicerBot < handle
     % uses visual servoing to detect when a pizza is in front of it and
     % cut it into 8 equal slices
 
-    properties (Constant)
-        robot = UR3;
+    properties
+        robot;
         step = 50;
     end
 
@@ -12,6 +12,7 @@ classdef SlicerBot < handle
         % constructor
         function self = SlicerBot()
             %create a UR3 with a pizza slicer attachment
+            self.robot = UR3;
         end
 
             % joint movement path
@@ -99,7 +100,7 @@ classdef SlicerBot < handle
         function JointJogRobot(self,joint,sliderVal)
             
             % get current joint states
-            q1 = self.robot.model.getpos;     
+            q1 = self.robot.model.getpos();     
             
             % update to slider value
             q1(1,joint) = deg2rad(sliderVal);

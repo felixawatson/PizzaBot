@@ -7,8 +7,8 @@ classdef ChefBot < handle
     % movement through functions might make it difficult to animate grippers and
     % pizza staying on the ee, 
 
-    properties (Constant)
-        robot = IRB1200H; 
+    properties
+        robot; 
         home = [0 0 pi/2 0 0 0];
     end
 
@@ -16,9 +16,8 @@ classdef ChefBot < handle
         % constructor
         function self = ChefBot()
             % create IRB1200 with gripper
-            home = self.home;
-            IRB = IRB1200h;
-            IRB.model.animate(home);
+            self.robot = IRB1200H();
+            self.robot.model.animate(self.home);
         end
 
         % collision avoidance
@@ -44,8 +43,7 @@ classdef ChefBot < handle
         % close gripper
         function CloseGripper(self)
         end
-    end
-    methods (Static)
+
         % joint movement path
         function JointMove(robot, gripper, transform)
             steps = 100;
@@ -95,7 +93,8 @@ classdef ChefBot < handle
         function CartJogRobot(self,direction)
             steps = self.step;
             distance = 0.1;
-            q1 = self.robot.model.getpos;
+            q1 = self.robot.model.getpos()
+            ;
             tf = self.robot.model.fkine(q1).T;
             jog = tf;
                         
@@ -138,16 +137,12 @@ classdef ChefBot < handle
         function JointJogRobot(self,joint,sliderVal)
             
             % get current joint states
-            q1 = self.robot.model.getpos;     
-            
+            q1 = self.robot.model.getpos();
             % update to slider value
             q1(1,joint) = deg2rad(sliderVal);
             
             % animate
             self.robot.model.animate(q1);
         end
-    end
-
-    methods (Static)
     end
 end
