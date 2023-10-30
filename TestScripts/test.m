@@ -25,7 +25,7 @@ IRBhome = [-pi/2 -pi/4 3*pi/4 0 0 0];
 
 % IRB init
 IRB = IRB1200H;
-% IRB.model.teach();
+IRB.model.teach();
 IRB.model.animate(IRBhome);
 CHEFee = IRB.model.fkine(IRB.model.getpos);
 gripper = scoop;

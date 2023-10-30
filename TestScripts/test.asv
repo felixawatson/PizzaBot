@@ -25,7 +25,7 @@ IRBhome = [-pi/2 -pi/4 3*pi/4 0 0 0];
 
 % IRB init
 IRB = IRB1200H;
-% IRB.model.teach();
+IRB.model.teach();
 IRB.model.animate(IRBhome);
 CHEFee = IRB.model.fkine(IRB.model.getpos);
 gripper = scoop;
@@ -298,7 +298,32 @@ for i = 1:steps
 end
 
 % place on conveyor
+q1 = IRB.model.getpos;
+tf1 = IRB.model.fkine(q1).T;
+transform = tf1;
+transform(1:3,4) = (transform(1:3,4) + [0.5,0,0]');
 
+tfMatrix = ctraj(tf1,transform,steps);   
+
+for i = 1:steps
+    if i == 1
+        qMatrix(i,:) = IRB.model.ikcon(tfMatrix(:,:,i),q1);
+        lastpos = qMatrix(i,:);
+        IRB.model.animate(qMatrix(i,:))
+        CHEFee = IRB.model.fkine(IRB.model.getpos);  
+        gripper.model.base = CHEFee;
+        gripper.model.animate(0);
+        drawnow()
+    else 
+        qMatrix(i,:) = IRB.model.ikcon(tfMatrix(:,:,i),lastpos);
+        lastpos = qMatrix(i,:);
+        IRB.model.animate(qMatrix(i,:))
+        CHEFee = IRB.model.fkine(IRB.model.getpos);  
+        gripper.model.base = CHEFee;
+        gripper.model.animate(0);
+        drawnow()
+    end
+end
 
 % move pizza along and delete, print 'pizza delivered' or some shit
 q1 = pizza.model.getpos;
@@ -313,3 +338,4 @@ for i = 1:30
         pizza.model.animate(0)
         drawnow()
 end
+delete(pizza);

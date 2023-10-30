@@ -16,9 +16,14 @@ classdef SlicerBot < handle
             self.robot = UR3;
             self.robot.model.base = self.base;
             self.robot.model.animate(self.home);
+           
+            % ee = self.robot.model.fkine(self.robot.model.getpos);
+            % cut = cutter;
+            % cut.model.base = ee;
+            % cut.model.animate(0);
         end
 
-        % joint movement path
+            % joint movement path
         function JointMove(robot, transform)
             steps = self.step;
             q1 = robot.model.getpos;
