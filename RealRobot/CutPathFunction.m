@@ -1,0 +1,174 @@
+function [jointstates] = CutPathFunction()
+    close all
+    hold on;
+     
+    ur3base = [-1,-1,0.4]; % approx
+    ur3home = deg2rad([-120,-90,60,-60,-90,0]);
+    
+    % UR3 init
+    ur3 = UR3;
+    ur3.model.base = ur3base;
+    ur3.model.animate(ur3home); 
+    
+    %% ur3 cut
+    steps = 20; % change interpolation
+    rad = 0.3/2; % size of pizza
+    center = [-0.8,-0.7,0.55]; % pizza center
+    diag = rad*sin(pi/4);
+    
+    tf = transl(center - [0,0,0.15]);
+    % first cut
+    p01 = transl(center - [rad,0,0]) * trotx(pi);
+    p02 = transl(center + [rad,0,0]) * trotx(pi);
+    p03 = p02 * transl([0,0,-0.1]); % way point
+    % second cut
+    p04 = transl(center - [0,rad,0]) * trotx(pi) * trotz(pi/2);
+    p05 = transl(center + [0,rad,0]) * trotx(pi) * trotz(pi/2);
+    % third cut
+    p07 = transl(center - [diag,diag,0]) * trotx(pi) * trotz(-pi/4);
+    p08 = transl(center + [diag,diag,0]) * trotx(pi) * trotz(-pi/4);
+    p09 = p07 * transl([0,0,-0.1]); % way point
+    %fourth cut
+    p10 = transl(center + [diag,-diag,0]) * trotx(pi) * trotz(pi/4);
+    p11 = transl(center + [-diag,diag,0]) * trotx(pi) * trotz(pi/4);
+    p06 = p11 * transl([0,0,-0.1]); % way point
+
+    jointstates = zeros(13*steps,6);
+    
+    Pizza(tf,'Base');
+    
+    q1 = ur3.model.getpos;
+    q2 = ur3home; %make it a TR
+    qMatrix = jtraj(q1,q2,steps);  
+    jointstates(1:steps,:) = qMatrix;
+    for i = 1:steps
+        ur3.model.animate(qMatrix(i,:));
+        drawnow()
+    end
+    
+    q1 = ur3.model.getpos;
+    q2 = ur3.model.ikcon(p01,q1); %make it a TR
+    qMatrix = jtraj(q1,q2,steps);   
+    jointstates(1+steps:2*steps,:) = qMatrix;
+    for i = 1:steps
+        ur3.model.animate(qMatrix(i,:));
+        drawnow()
+    end
+    
+    % cut one
+    tfMatrix = ctraj(p01,p02,steps);   
+    for i = 1:steps
+        qMatrix(i,:) = ur3.model.ikcon(tfMatrix(:,:,i),q1);
+        q1 = qMatrix(i,:);
+        ur3.model.animate(qMatrix(i,:))
+        drawnow()
+    end
+    jointstates(1+2*steps:3*steps,:) = qMatrix;
+    
+    % way point
+    q1 = ur3.model.getpos;
+    q2 = ur3.model.ikcon(p03,q1); %make it a TR
+    qMatrix = jtraj(q1,q2,steps);    
+    jointstates(1+3*steps:4*steps,:) = qMatrix;
+    for i = 1:steps
+        ur3.model.animate(qMatrix(i,:));
+        drawnow()
+    end
+    
+    % way point
+    q1 = ur3.model.getpos;
+    q2 = ur3.model.ikcon(p10,q1); %make it a TR
+    qMatrix = jtraj(q1,q2,steps); 
+    jointstates(1+4*steps:5*steps,:) = qMatrix;
+    for i = 1:steps
+        ur3.model.animate(qMatrix(i,:));
+        drawnow()
+    end
+    
+    % cut two
+    tfMatrix = ctraj(p10,p11,steps);   
+    for i = 1:steps
+        qMatrix(i,:) = ur3.model.ikcon(tfMatrix(:,:,i),q1);
+        q1 = qMatrix(i,:);
+        ur3.model.animate(qMatrix(i,:))
+        drawnow()
+    end
+    jointstates(1+5*steps:6*steps,:) = qMatrix;
+    
+    % way point
+    q1 = ur3.model.getpos;
+    q2 = ur3.model.ikcon(p06,q1); %make it a TR
+    qMatrix = jtraj(q1,q2,steps);    
+    jointstates(1+6*steps:7*steps,:) = qMatrix;
+    for i = 1:steps
+        ur3.model.animate(qMatrix(i,:));
+        drawnow()
+    end
+    
+    q1 = ur3.model.getpos;
+    q2 = ur3.model.ikcon(p05,q1); %make it a TR
+    qMatrix = jtraj(q1,q2,steps);  
+    jointstates(1+7*steps:8*steps,:) = qMatrix;
+    for i = 1:steps
+        ur3.model.animate(qMatrix(i,:));
+        drawnow()
+    end
+    
+    % cut three
+    tfMatrix = ctraj(p05,p04,steps);   
+    for i = 1:steps
+        qMatrix(i,:) = ur3.model.ikcon(tfMatrix(:,:,i),q1);
+        q1 = qMatrix(i,:);
+        ur3.model.animate(qMatrix(i,:))
+        drawnow()
+    end
+    jointstates(1+8*steps:9*steps,:) = qMatrix;
+    
+    % way point
+    q1 = ur3.model.getpos;
+    q2 = ur3.model.ikcon(p09,q1); %make it a TR
+    qMatrix = jtraj(q1,q2,steps);  
+    jointstates(1+9*steps:10*steps,:) = qMatrix;
+    for i = 1:steps
+        ur3.model.animate(qMatrix(i,:));
+        drawnow()
+    end
+    
+    % way point
+    q1 = ur3.model.getpos;
+    q2 = ur3.model.ikcon(p07,q1); %make it a TR
+    qMatrix = jtraj(q1,q2,steps);  
+    jointstates(1+10*steps:11*steps,:) = qMatrix;
+    for i = 1:steps
+        ur3.model.animate(qMatrix(i,:));
+        drawnow()
+    end
+    
+    % cut four
+    tfMatrix = ctraj(p07,p08,steps);   
+    for i = 1:steps
+        qMatrix(i,:) = ur3.model.ikcon(tfMatrix(:,:,i),q1);
+        q1 = qMatrix(i,:);
+        ur3.model.animate(qMatrix(i,:))
+        drawnow()
+    end
+    jointstates(1+11*steps:12*steps,:) = qMatrix;
+    
+    % home
+    q1 = ur3.model.getpos;
+    q2 = ur3home; %make it a TR
+    qMatrix = jtraj(q1,q2,steps);   
+    jointstates(1+12*steps:13*steps,:) = qMatrix;
+    for i = 1:steps
+        ur3.model.animate(qMatrix(i,:));
+        drawnow()
+    end
+    
+    %% test it works
+    % 
+    % for i = 1:length(jointstates)
+    %     ur3.model.animate(jointstates(i,:));
+    %     drawnow()
+    % end
+
+end

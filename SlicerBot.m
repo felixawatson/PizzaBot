@@ -5,6 +5,7 @@ classdef SlicerBot < handle
 
     properties
         robot;
+        gripper;
         base = [-1,-1,0.4]; % approx
         home = deg2rad([-120,-90,60,-60,-90,0]);
     end
@@ -14,53 +15,53 @@ classdef SlicerBot < handle
         function self = SlicerBot()
             %create a UR3 with a pizza slicer attachment
             self.robot = UR3;
+            self.gripper = ur3gripper;
             self.robot.model.base = self.base;
             self.robot.model.animate(self.home);
+            ee = self.robot.model.fkine(self.robot.model.getpos);
+            self.gripper.base(ee,'open');
+            self.gripper.open();
         end
 
         % joint movement path
-        function JointMove(robot, transform)
-            steps = self.step;
-            q1 = robot.model.getpos;
-            q2 = robot.model.ikcon(transform); 
+        function JointMove(self,transform)
+            steps = 100;
+            q1 = self.robot.model.getpos;
+            q2 = self.robot.model.ikcon(transform); 
             qMatrix = jtraj(q1,q2,steps);    
         
             for i = 1:self.step
-                robot.model.animate(qMatrix(i,:));
+                self.robot.model.animate(qMatrix(i,:));
                 %animate gripper
-                % ee = r.model.fkine(r.model.getpos);  
-                % gripper.model.base = ee
+                ee = self.robot.model.fkine(self.robot.model.getpos);  
+                self.gripper.base(ee)
                 drawnow()
             end
         end
         
         % cartesian movement path (not tested)
         function CartesianMove(self,transform)
-            steps = self.step;
-            tf1 = self.robot.model.getpos.T;
-            q1 = self.robot.model.getpos;
+            steps = 100;
+            q1 = self.robot.model.getpos;            
+            tf1 = self.robot.model.fkine(q1).T;
             tfMatrix = ctraj(tf1,transform,steps);    
             
             for i = 1:steps
-                if i == 1
-                    qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
-                    lastpos = qMatrix(i,:);
-                    self.robot.model.animate(qMatrix(i,:))
-                    drawnow()
-                else 
-                    qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),lastpos);
-                    lastpos = qMatrix(i,:);
-                    self.robot.model.animate(qMatrix(i,:))
-                    drawnow()
-                end
+                qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
+                q1 = qMatrix(i,:);
+                self.robot.model.animate(qMatrix(i,:))
+                ee = tfMatrix(:,:,i); 
+                self.gripper.model.base = ee;
+                self.gripper.base(ee);
+                drawnow()
             end
         end
 
         % jogs robot in cartesian frame
         function CartJogRobot(self,direction)
-            steps = self.step;
+            steps = 50;
             distance = 0.1;
-            q1 = self.robot.model.getpos;
+            q1 = self.robot.model.getpos();
             tf = self.robot.model.fkine(q1).T;
             jog = tf;
                         
@@ -85,20 +86,15 @@ classdef SlicerBot < handle
             tfMatrix = ctraj(tf,jog,steps);    
 
             for i = 1:steps
-                if i == 1
-                    qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
-                    lastpos = qMatrix(i,:);
-                    self.robot.model.animate(qMatrix(i,:))
-                    drawnow()
-                else 
-                    qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),lastpos);
-                    lastpos = qMatrix(i,:);
-                    self.robot.model.animate(qMatrix(i,:))
-                    drawnow()
-                end
+                qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
+                q1 = qMatrix(i,:);
+                self.robot.model.animate(qMatrix(i,:))
+                ee = self.robot.model.fkine(self.robot.model.getpos);  
+                self.gripper.base(ee,'open');
+                drawnow()
             end
         end
-        
+
         % jogs robots joints using a slider
         function JointJogRobot(self,joint,sliderVal)
             
@@ -110,6 +106,9 @@ classdef SlicerBot < handle
             
             % animate
             self.robot.model.animate(q1);
+            ee = self.robot.model.fkine(self.robot.model.getpos);  
+            self.gripper.base(ee,'open');
+            drawnow()
         end
     end
 

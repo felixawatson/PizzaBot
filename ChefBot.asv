@@ -74,7 +74,7 @@ classdef ChefBot < handle
                 self.gripper.model.base = ee;
                 self.gripper.model.animate(0);
                
-                try % NO WORKY 
+                try  
                     pizza.model.base = ee * transl(self.eescoopoffset); 
                     pizza.model.animate(0)  
                 end
@@ -90,33 +90,18 @@ classdef ChefBot < handle
             tfMatrix = ctraj(tf1,transform,steps);    
             
             for i = 1:steps
-                if i == 1
-                    qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
-                    lastpos = qMatrix(i,:);
-                    self.robot.model.animate(qMatrix(i,:))
-                    ee = self.robot.model.fkine(self.robot.model.getpos);  
-                    self.gripper.model.base = ee;
-                    self.gripper.model.animate(0);
-                   
-                    try % NO WORKY
-                        pizza.model.base = ee * transl(self.eescoopoffset);
-                        pizza.model.animate(0)  
-                    end
-                    drawnow()
-                else 
-                    qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),lastpos);
-                    lastpos = qMatrix(i,:);
-                    self.robot.model.animate(qMatrix(i,:))
-                    ee = self.robot.model.fkine(self.robot.model.getpos);  
-                    self.gripper.model.base = ee;
-                    self.gripper.model.animate(0);
-                    
-                    try % NO WORKY
-                        pizza.model.base = ee * transl(self.eescoopoffset);
-                        pizza.model.animate(0)  
-                    end
-                    drawnow()
+                qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
+                q1 = qMatrix(i,:);
+                self.robot.model.animate(qMatrix(i,:))
+                ee = self.robot.model.fkine(self.robot.model.getpos);  
+                self.gripper.model.base = ee;
+                self.gripper.model.animate(0);
+                try 
+                    pizza.model.base = ee * transl(self.eescoopoffset);
+                    pizza.model.animate(0)  
+                catch
                 end
+                drawnow()
             end
         end
 
@@ -149,17 +134,10 @@ classdef ChefBot < handle
             tfMatrix = ctraj(tf,jog,steps);    
 
             for i = 1:steps
-                if i == 1
-                    qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
-                    lastpos = qMatrix(i,:);
-                    self.robot.model.animate(qMatrix(i,:))
-                    drawnow()
-                else 
-                    qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),lastpos);
-                    lastpos = qMatrix(i,:);
-                    self.robot.model.animate(qMatrix(i,:))
-                    drawnow()
-                end
+                qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
+                q1 = qMatrix(i,:);
+                self.robot.model.animate(qMatrix(i,:))
+                drawnow()
             end
         end
         
