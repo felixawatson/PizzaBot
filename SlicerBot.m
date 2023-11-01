@@ -64,7 +64,7 @@ classdef SlicerBot < handle
             end
              
             T = [rpy2r(theta(1,1),theta(2,1),theta(3,1)) x(:,1);zeros(1,3) 1];          % Create transformation of first point and angle
-            q0 = zeros(1,6);                                                            % Initial guess for joint angles
+            q0 = qMatrix(1,:);                                                            % Initial guess for joint angles
             qMatrix(1,:) = self.robot.model.ikcon(T,q0);                                % Solve joint angles to achieve first waypoint
             
             % 1.4) Track the trajectory with RMRC

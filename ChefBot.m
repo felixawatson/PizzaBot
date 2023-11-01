@@ -89,7 +89,7 @@ classdef ChefBot < handle
             end
              
             T = [rpy2r(theta(1,1),theta(2,1),theta(3,1)) x(:,1);zeros(1,3) 1];          % Create transformation of first point and angle
-            q0 = zeros(1,6);                                                            % Initial guess for joint angles
+            q0 = qMatrix(1,:);                                                            % Initial guess for joint angles
             qMatrix(1,:) = self.robot.model.ikcon(T,q0);                                % Solve joint angles to achieve first waypoint
             
             % 1.4) Track the trajectory with RMRC
@@ -142,10 +142,9 @@ classdef ChefBot < handle
             q1 = self.robot.model.getpos;
             q2 = self.robot.model.ikcon(transform,q1); 
             qMatrix = jtraj(q1,q2,steps);  
-            
+            % qMatrix = self.RMRC(qMatrix);
             for i = 1:steps
                 self.robot.model.animate(qMatrix(i,:));
-                %animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos); 
                 self.gripper.model.base = ee;
                 self.gripper.model.animate(0);
