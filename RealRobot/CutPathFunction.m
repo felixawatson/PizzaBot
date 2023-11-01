@@ -18,18 +18,18 @@ function [jointstates] = CutPathFunction()
     
     tf = transl(center - [0,0,0.15]);
     % first cut
-    p01 = transl(center - [rad,0,0]) * trotx(pi);
+    p01 = transl(center - [rad,0,0]) * trotx(pi); %1
     p02 = transl(center + [rad,0,0]) * trotx(pi);
     p03 = p02 * transl([0,0,-0.1]); % way point
-    % second cut
-    p04 = transl(center - [0,rad,0]) * trotx(pi) * trotz(pi/2);
+    % fourth cut
+    p04 = transl(center - [0,rad,0]) * trotx(pi) * trotz(pi/2); %3
     p05 = transl(center + [0,rad,0]) * trotx(pi) * trotz(pi/2);
     % third cut
-    p07 = transl(center - [diag,diag,0]) * trotx(pi) * trotz(-pi/4);
+    p07 = transl(center - [diag,diag,0]) * trotx(pi) * trotz(-pi/4); %4
     p08 = transl(center + [diag,diag,0]) * trotx(pi) * trotz(-pi/4);
     p09 = p07 * transl([0,0,-0.1]); % way point
-    %fourth cut
-    p10 = transl(center + [diag,-diag,0]) * trotx(pi) * trotz(pi/4);
+    %second cut
+    p10 = transl(center + [diag,-diag,0]) * trotx(pi) * trotz(pi/4); %2
     p11 = transl(center + [-diag,diag,0]) * trotx(pi) * trotz(pi/4);
     p06 = p11 * transl([0,0,-0.1]); % way point
 

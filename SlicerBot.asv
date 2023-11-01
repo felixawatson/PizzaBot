@@ -119,7 +119,7 @@ classdef SlicerBot < handle
                 self.robot.model.animate(qMatrix(i,:));
                 %animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
-                self.gripper.base(ee,'open')
+                self.gripper.base(ee)
                 drawnow()
             end
         end
@@ -136,7 +136,8 @@ classdef SlicerBot < handle
                 q1 = qMatrix(i,:);
                 self.robot.model.animate(qMatrix(i,:))
                 ee = tfMatrix(:,:,i); 
-                self.gripper.base(ee,'open');
+                self.gripper.model.base = ee;
+                self.gripper.base(ee);
                 drawnow()
             end
         end
@@ -309,8 +310,6 @@ classdef SlicerBot < handle
         function stepSlicing(self,qMatrix)
             for i = 1:length(qMatrix)
                 self.robot.model.animate(qMatrix(i,:));
-                ee = self.robot.model.fkine(self.robot.model.getpos);  
-                self.gripper.base(ee,'closed')
                 drawnow();
             end
         end
