@@ -27,6 +27,25 @@ classdef SlicerBot < handle
             self.gripper.open();
         end
 
+        % Move to home position
+        function Home(self)
+            steps = 100;
+            q1 = self.robot.model.getpos;
+            q2 = self.home; 
+            qMatrix = jtraj(q1,q2,steps);  
+
+            for i = 1:self.step
+                if self.EStopCheck()
+                    return
+                end
+                self.robot.model.animate(qMatrix(i,:));
+                %animate gripper
+                ee = self.robot.model.fkine(self.robot.model.getpos);  
+                self.gripper.base(ee,'open')
+                drawnow()
+            end
+        end
+
         % get transform
         function [tf] = gettransform(self,q)
             if q == 0
@@ -37,6 +56,7 @@ classdef SlicerBot < handle
             end
         end
 
+        % RMRC 
         function [qMatrix] = RMRC(self,qMatrix)
             % 1.1) Set parameters for the simulation
             t = 10;                             % Total time (s)

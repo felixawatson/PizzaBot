@@ -32,8 +32,24 @@ classdef ChefBot < handle
         function ObjectAvoidance(self)
         end
 
-        % place ingredients
-        function AddToppings(self)
+        % Move to home position
+        function Home(self)
+            steps = 100;
+            q1 = self.robot.model.getpos;
+            q2 = self.home; 
+            qMatrix = jtraj(q1,q2,steps);  
+
+            for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
+                self.robot.model.animate(qMatrix(i,:));
+                %animate gripper
+                ee = self.robot.model.fkine(self.robot.model.getpos); 
+                self.gripper.model.base = ee;
+                self.gripper.model.animate(0);
+                drawnow()
+            end
         end
 
         % calculate motion
