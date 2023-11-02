@@ -1,74 +1,47 @@
-classdef ChefBot < handle
-    %% Class for pizza preparation robot
-    % Pizza bot puts ingredients on the pizza and then places the pizza in
-    % the oven to be cooked. Once cooked the pizza is placed in front of
-    % the slicer bot
-
-    % movement through functions might make it difficult to animate grippers and
-    % pizza staying on the ee, 
+classdef SlicerBot < handle
+    %% Class for pizza cutting robot
+    % uses visual servoing to detect when a pizza is in front of it and
+    % cut it into 8 equal slices
 
     properties
-        robot; 
+        robot;
         gripper;
-        eescoopoffset = transl([-0.05,0,0.35]);
-        home = [-pi/2 -pi/4 3*pi/4 0 0 0];
-        eStop = 0;
-        cancelDemo = 0;
+        base = [-1,-1,0.4]; % approx
+        home = deg2rad([-120,-90,60,-60,-90,0]);
     end
 
     methods
         % constructor
-        function self = ChefBot()
-            % create IRB1200 with gripper
-            self.robot = IRB1200H();
+        function self = SlicerBot()
+            %create a self.robot with a pizza slicer attachment
+            self.robot = UR3;
+            self.robot.model.base = self.base;
             self.robot.model.animate(self.home);
             ee = self.robot.model.fkine(self.robot.model.getpos);
-            self.gripper = scoop;
-            self.gripper.model.base = ee;
-            self.gripper.model.animate(0);
+            
+            self.gripper = ur3gripper;
+            self.gripper.base(ee,'open');
+            self.gripper.open();
         end
 
-        % collision avoidance
-        function ObjectAvoidance(self)
-        end
-
-        % place ingredients
-        function AddToppings(self)
-        end
-
-        % calculate motion
-        function [qMatrix] = CalcMotion(self,transform)
-            steps = 100;
-            q1 = self.robot.model.getpos;
-            q2 = self.robot.model.ikcon(transform,q1); 
-            qMatrix = jtraj(q1,q2,steps);  
-        end
-
-        % animate calculated motion
-        function stepCalcMotion(self,qMatrix,pizza)
-            for i = 1:length(qMatrix)
-                self.robot.model.animate(qMatrix(i,:));
-                %animate gripper
-                ee = self.robot.model.fkine(self.robot.model.getpos); 
-                self.gripper.model.base = ee;
-                self.gripper.model.animate(0);
-                try  
-                    pizza.model.base = ee * transl(self.eescoopoffset); 
-                    pizza.model.animate(0)  
-                end
-                drawnow()
+        % get transform
+        function [tf] = gettransform(self,q)
+            if q == 0
+                q1 = self.robot.model.getpos;            
+                tf = self.robot.model.fkine(q1).T;
+            else
+                tf = self.robot.model.fkine(q).T;
             end
         end
 
-        % Resolved Motion Rate Control
         function [qMatrix] = RMRC(self,qMatrix)
             % 1.1) Set parameters for the simulation
             t = 10;                             % Total time (s)
-            steps = length(qMatrix);                        % No. of steps for simulation
+            steps = length(qMatrix);            % No. of steps for simulation
             deltaT = t/steps;                   % Control frequency
             delta = 2*pi/steps;                 % Small angle change
             epsilon = 0.1;                      % Threshold value for manipulability/Damped Least Squares
-            W = diag([1 1 1 1 1 1]);      % Weighting matrix for the velocity vector
+            W = diag([ 1 1 0.1 0.1 0.1]);      % Weighting matrix for the velocity vector
             
             % 1.2) Allocate array data
             m = zeros(steps,1);                 % Array for Measure of Manipulability
@@ -91,7 +64,7 @@ classdef ChefBot < handle
             end
              
             T = [rpy2r(theta(1,1),theta(2,1),theta(3,1)) x(:,1);zeros(1,3) 1];          % Create transformation of first point and angle
-            q0 = qMatrix(1,:);                                                            % Initial guess for joint angles
+            q0 = zeros(1,6);                                                            % Initial guess for joint angles
             qMatrix(1,:) = self.robot.model.ikcon(T,q0);                                % Solve joint angles to achieve first waypoint
             
             % 1.4) Track the trajectory with RMRC
@@ -126,63 +99,45 @@ classdef ChefBot < handle
                 end
                 qMatrix(i+1,:) = qMatrix(i,:) + deltaT*qdot(i,:);                     	% Update next joint state based on joint velocities
             end
-        end
-        
-        % get transform
-        function [tf] = gettransform(self,q)
-            if q == 0
-                q1 = self.robot.model.getpos;            
-                tf = self.robot.model.fkine(q1).T;
-            else
-                tf = self.robot.model.fkine(q).T;
-            end
-        end
-
-        % joint movement path
-        function JointMove(self,transform,pizza)
-            steps = 100;
-            q1 = self.robot.model.getpos;
-            q2 = self.robot.model.ikcon(transform,q1); 
-            qMatrix = jtraj(q1,q2,steps);  
-            % qMatrix = self.RMRC(qMatrix);
-            for i = 1:steps
-                if self.EStopCheck()
-                    return
-                end
+            for i = 1:length(qMatrix)
                 self.robot.model.animate(qMatrix(i,:));
-                ee = self.robot.model.fkine(self.robot.model.getpos); 
-                self.gripper.model.base = ee;
-                self.gripper.model.animate(0);
-                try  
-                    pizza.model.base = ee * transl(self.eescoopoffset); 
-                    pizza.model.animate(0)  
-                end
+                %animate gripper
+                ee = self.robot.model.fkine(self.robot.model.getpos);  
+                self.gripper.base(ee,'closed')
                 drawnow()
             end
         end
 
-        % cartesian movement path 
-        function CartesianMove(self,transform,pizza)
+        % joint movement path
+        function JointMove(self,transform)
+            steps = 100;
+            q1 = self.robot.model.getpos;
+            q2 = self.robot.model.ikcon(transform,q1); 
+            qMatrix = jtraj(q1,q2,steps);  
+        
+            for i = 1:steps
+                self.robot.model.animate(qMatrix(i,:));
+                %animate gripper
+                ee = self.robot.model.fkine(self.robot.model.getpos);  
+                self.gripper.base(ee)
+                drawnow()
+            end
+        end
+        
+        % cartesian movement path (not tested)
+        function CartesianMove(self,transform)
             steps = 100;
             q1 = self.robot.model.getpos;            
             tf1 = self.robot.model.fkine(q1).T;
             tfMatrix = ctraj(tf1,transform,steps);    
             
             for i = 1:steps
-                if self.EStopCheck()
-                    return
-                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
                 q1 = qMatrix(i,:);
                 self.robot.model.animate(qMatrix(i,:))
-                ee = self.robot.model.fkine(self.robot.model.getpos);  
+                ee = tfMatrix(:,:,i); 
                 self.gripper.model.base = ee;
-                self.gripper.model.animate(0);
-                try 
-                    pizza.model.base = ee * transl(self.eescoopoffset);
-                    pizza.model.animate(0)  
-                catch
-                end
+                self.gripper.base(ee);
                 drawnow()
             end
         end
@@ -216,46 +171,151 @@ classdef ChefBot < handle
             tfMatrix = ctraj(tf,jog,steps);    
 
             for i = 1:steps
-                if self.EStopCheck()
-                    return
-                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
                 q1 = qMatrix(i,:);
                 self.robot.model.animate(qMatrix(i,:))
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
-                self.gripper.model.base = ee;
-                self.gripper.model.animate(0);
+                self.gripper.base(ee,'open');
                 drawnow()
             end
         end
-        
+
         % jogs robots joints using a slider
         function JointJogRobot(self,joint,sliderVal)
             
             % get current joint states
-            q1 = self.robot.model.getpos();
+            q1 = self.robot.model.getpos();     
+            
             % update to slider value
             q1(1,joint) = deg2rad(sliderVal);
             
             % animate
             self.robot.model.animate(q1);
             ee = self.robot.model.fkine(self.robot.model.getpos);  
-            self.gripper.model.base = ee;
-            self.gripper.model.animate(0);
+            self.gripper.base(ee,'open');
             drawnow()
         end
 
-        function cancel = EStopCheck(self)
-            while self.eStop
-                pause(0.5);
-            end
+        % calculate cut based on pizza position
+        function [jointstates] = CalculateCut(self)
+            steps = 50; % change interpolation
+            rad = 0.3/2; % size of pizza
+            center = [-0.8,-0.7,0.5]; % pizza center
+            diag = rad*sin(pi/4);
+            tf = transl(center - [0,0,0]);
+
+            % first cut
+            p01 = transl(center - [rad,0,0]) * trotx(pi);
+            p02 = transl(center + [rad,0,0]) * trotx(pi);
+            p03 = p02 * transl([0,0,-0.1]); % way point
+            % second cut
+            p04 = transl(center - [0,rad,0]) * trotx(pi) * trotz(pi/2); % 8
+            p05 = transl(center + [0,rad,0]) * trotx(pi) * trotz(pi/2); % 7
+            % third cut
+            p07 = transl(center - [diag,diag,0]) * trotx(pi) * trotz(-pi/4); % 
+            p08 = transl(center + [diag,diag,0]) * trotx(pi) * trotz(-pi/4); % 
+            p09 = p07 * transl([0,0,-0.1]); % way point
+            %fourth cut
+            p10 = transl(center + [diag,-diag,0]) * trotx(pi) * trotz(pi/4); % 4
+            p11 = transl(center + [-diag,diag,0]) * trotx(pi) * trotz(pi/4); % 5
+            p06 = p11 * transl([0,0,-0.1]); % way point % 6
             
-            if self.cancelDemo
-                cancel = true;
-            else
-                cancel = false;
+            jointstates = zeros(13*steps,6);
+                        
+            q1 = self.robot.model.getpos;
+            q2 = self.home; %make it a TR
+            qMatrix = jtraj(q1,q2,steps);  
+            jointstates(1:steps,:) = qMatrix;
+            
+            q1 = q2;
+            q2 = self.robot.model.ikcon(p01,q1); %make it a TR
+            qMatrix = jtraj(q1,q2,steps);   
+            jointstates(1+steps:2*steps,:) = qMatrix;
+            
+            % cut one
+            tfMatrix = ctraj(p01,p02,steps);   
+            for i = 1:steps
+                qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
+                q2 = qMatrix(i,:);
             end
-            self.cancelDemo = 0;
+            jointstates(1+2*steps:3*steps,:) = qMatrix;
+            
+            % way point
+            q1 = q2;
+            q2 = self.robot.model.ikcon(p03,q2); %make it a TR
+            qMatrix = jtraj(q1,q2,steps);    
+            jointstates(1+3*steps:4*steps,:) = qMatrix;
+            
+            % way point
+            q1 = q2;
+            q2 = self.robot.model.ikcon(p10,q2); %make it a TR
+            qMatrix = jtraj(q1,q2,steps); 
+            jointstates(1+4*steps:5*steps,:) = qMatrix;
+            
+            % cut two
+            tfMatrix = ctraj(p10,p11,steps);   
+            for i = 1:steps
+                qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
+                q2 = qMatrix(i,:);
+            end
+            jointstates(1+5*steps:6*steps,:) = qMatrix;
+            
+            % way point
+            q1 = q2;
+            q2 = self.robot.model.ikcon(p06,q1); %make it a TR
+            qMatrix = jtraj(q1,q2,steps);    
+            jointstates(1+6*steps:7*steps,:) = qMatrix;
+            
+            q1 = q2;
+            q2 = self.robot.model.ikcon(p05,q1); %make it a TR
+            qMatrix = jtraj(q1,q2,steps);  
+            jointstates(1+7*steps:8*steps,:) = qMatrix;
+            
+            % cut three
+            tfMatrix = ctraj(p05,p04,steps);   
+            for i = 1:steps
+                qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
+                q2 = qMatrix(i,:);
+            end
+            jointstates(1+8*steps:9*steps,:) = qMatrix;
+            
+            % way point
+            q1 = q2;
+            q2 = self.robot.model.ikcon(p09,q1); %make it a TR
+            qMatrix = jtraj(q1,q2,steps);  
+            jointstates(1+9*steps:10*steps,:) = qMatrix;
+            
+            % way point
+            q1 = q2;
+            q2 = self.robot.model.ikcon(p07,q1); %make it a TR
+            qMatrix = jtraj(q1,q2,steps);  
+            jointstates(1+10*steps:11*steps,:) = qMatrix;
+            
+            % cut four
+            tfMatrix = ctraj(p07,p08,steps);   
+            for i = 1:steps
+                qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
+                q2 = qMatrix(i,:);
+            end
+            jointstates(1+11*steps:12*steps,:) = qMatrix;
+            
+            % home
+            q1 = q2;
+            q2 = self.home; %make it a TR
+            qMatrix = jtraj(q1,q2,steps);   
+            jointstates(1+12*steps:13*steps,:) = qMatrix;
         end
+    
+        % step through slicing procedure
+        function stepSlicing(self,qMatrix)
+            for i = 1:length(qMatrix)
+                self.robot.model.animate(qMatrix(i,:));
+                drawnow();
+            end
+        end
+    end
+
+    methods (Static)   
+        
     end
 end

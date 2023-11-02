@@ -38,10 +38,9 @@ classdef ur3gripper < handle
             switch gripperstate
                 case 'closed'
                     self.closed()
-                case 'open'
-                    self.open()
                 otherwise
-                    return
+                    self.open()
+                
             end
         end
     end
