@@ -9,8 +9,9 @@ classdef SlicerBot < handle
         base = [-1,-1,0.4]; % approx
         home = deg2rad([-120,-90,60,-60,-90,0]);
         eStop = 0;
+        cancelDemo = 0;        
         step = 50;
-        cancelDemo = 0;
+
     end
 
     methods
@@ -29,12 +30,12 @@ classdef SlicerBot < handle
 
         % Move to home position
         function Home(self)
-            steps = 100;
+            steps = self.step;
             q1 = self.robot.model.getpos;
             q2 = self.home; 
             qMatrix = jtraj(q1,q2,steps);  
 
-            for i = 1:self.step
+            for i = 1:steps
                 if self.EStopCheck()
                     return
                 end
@@ -133,13 +134,13 @@ classdef SlicerBot < handle
 
         % joint movement path
         function JointMove(self,transform)
-            steps = 100;
+            steps = self.step;
             q1 = self.robot.model.getpos;
             q2 = self.robot.model.ikcon(transform,q1); 
             qMatrix = jtraj(q1,q2,steps);  
         
 
-            for i = 1:self.step
+            for i = 1:steps
                 if self.EStopCheck()
                     return
                 end
@@ -153,7 +154,7 @@ classdef SlicerBot < handle
         
         % cartesian movement path (not tested)
         function CartesianMove(self,transform)
-            steps = 100;
+            steps = self.step;
             q1 = self.robot.model.getpos;            
             tf1 = self.robot.model.fkine(q1).T;
             tfMatrix = ctraj(tf1,transform,steps);    
@@ -173,7 +174,7 @@ classdef SlicerBot < handle
 
         % jogs robot in cartesian frame
         function CartJogRobot(self,direction)
-            steps = 50;
+            steps = self.step;
             distance = 0.1;
             q1 = self.robot.model.getpos();
             tf = self.robot.model.fkine(q1).T;

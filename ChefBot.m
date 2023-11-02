@@ -14,6 +14,7 @@ classdef ChefBot < handle
         home = [-pi/2 -pi/4 3*pi/4 0 0 0];
         eStop = 0;
         cancelDemo = 0;
+        step = 50;
     end
 
     methods
@@ -34,7 +35,7 @@ classdef ChefBot < handle
 
         % Move to home position
         function Home(self)
-            steps = 100;
+            steps = self.step;
             q1 = self.robot.model.getpos;
             q2 = self.home; 
             qMatrix = jtraj(q1,q2,steps);  
@@ -54,7 +55,7 @@ classdef ChefBot < handle
 
         % calculate motion
         function [qMatrix] = CalcMotion(self,transform)
-            steps = 100;
+            steps = self.step;
             q1 = self.robot.model.getpos;
             q2 = self.robot.model.ikcon(transform,q1); 
             qMatrix = jtraj(q1,q2,steps);  
@@ -156,7 +157,7 @@ classdef ChefBot < handle
 
         % joint movement path
         function JointMove(self,transform,pizza)
-            steps = 100;
+            steps = self.step;
             q1 = self.robot.model.getpos;
             q2 = self.robot.model.ikcon(transform,q1); 
             qMatrix = jtraj(q1,q2,steps);  
@@ -179,7 +180,7 @@ classdef ChefBot < handle
 
         % cartesian movement path 
         function CartesianMove(self,transform,pizza)
-            steps = 100;
+            steps = self.step;
             q1 = self.robot.model.getpos;            
             tf1 = self.robot.model.fkine(q1).T;
             tfMatrix = ctraj(tf1,transform,steps);    
