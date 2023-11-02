@@ -12,6 +12,8 @@ classdef ChefBot < handle
         gripper;
         eescoopoffset = transl([-0.05,0,0.35]);
         home = [-pi/2 -pi/4 3*pi/4 0 0 0];
+        eStop = 0;
+        cancelDemo = 0;
     end
 
     methods
@@ -68,6 +70,9 @@ classdef ChefBot < handle
             qMatrix = jtraj(q1,q2,steps);    
         
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 self.robot.model.animate(qMatrix(i,:));
                 %animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos); 
@@ -90,6 +95,9 @@ classdef ChefBot < handle
             tfMatrix = ctraj(tf1,transform,steps);    
             
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
                 q1 = qMatrix(i,:);
                 self.robot.model.animate(qMatrix(i,:))
@@ -134,6 +142,9 @@ classdef ChefBot < handle
             tfMatrix = ctraj(tf,jog,steps);    
 
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
                 q1 = qMatrix(i,:);
                 self.robot.model.animate(qMatrix(i,:))
@@ -158,6 +169,19 @@ classdef ChefBot < handle
             self.gripper.model.base = ee;
             self.gripper.model.animate(0);
             drawnow()
+        end
+
+        function cancel = EStopCheck(self)
+            while self.eStop
+                pause(0.5);
+            end
+            
+            if self.cancelDemo
+                cancel = true;
+            else
+                cancel = false;
+            end
+            self.cancelDemo = 0;
         end
     end
 end

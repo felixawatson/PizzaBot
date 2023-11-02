@@ -8,6 +8,9 @@ classdef SlicerBot < handle
         gripper;
         base = [-1,-1,0.4]; % approx
         home = deg2rad([-120,-90,60,-60,-90,0]);
+        eStop = 0;
+        step = 50;
+        cancelDemo = 0;
     end
 
     methods
@@ -31,6 +34,9 @@ classdef SlicerBot < handle
             qMatrix = jtraj(q1,q2,steps);    
         
             for i = 1:self.step
+                if self.EStopCheck()
+                    return
+                end
                 self.robot.model.animate(qMatrix(i,:));
                 %animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
@@ -47,6 +53,9 @@ classdef SlicerBot < handle
             tfMatrix = ctraj(tf1,transform,steps);    
             
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
                 q1 = qMatrix(i,:);
                 self.robot.model.animate(qMatrix(i,:))
@@ -86,6 +95,9 @@ classdef SlicerBot < handle
             tfMatrix = ctraj(tf,jog,steps);    
 
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q1);
                 q1 = qMatrix(i,:);
                 self.robot.model.animate(qMatrix(i,:))
@@ -110,19 +122,17 @@ classdef SlicerBot < handle
             self.gripper.base(ee,'open');
             drawnow()
         end
-    end
 
-    methods (Static)
-        % use RGB-D camera to detect the pizza [BONUS]
-        function DetectPizza()
-        end
-
-        % calculate cut based on pizza position
-        function CalculateCut()
-        end
-
-        % step through slicing procedure
-        function stepSlicing()
+        function cancel = EStopCheck(self)
+            while self.eStop
+                pause(0.5);
+            end
+            
+            if cancelDemo
+                cancel = true;
+            else
+                cancel = false;
+            end
         end
     end
 end
