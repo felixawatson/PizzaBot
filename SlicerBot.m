@@ -18,8 +18,8 @@ classdef SlicerBot < handle
         % constructor
         function self = SlicerBot()
             %create a self.robot with a pizza slicer attachment
-            self.robot = UR3;
-            self.robot.model.base = self.base;
+            
+            self.robot = UR3(transl(self.base(1), self.base(2), self.base(3)));
             self.robot.model.animate(self.home);
             ee = self.robot.model.fkine(self.robot.model.getpos);
             
