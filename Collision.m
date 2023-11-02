@@ -23,41 +23,44 @@ end
 % Display midpoints
 disp("Midpoints of each link:");
 disp(midpoints);
+% Provided transformation matrices 'tr'
 
 hold on;
 
-for i = 1:size(tr, 3)
-    % Get the midpoint of the segment
-    midpoint = tr(1:3, 4, i);
+%% Placing prisms
 
-    % Extract scaling factors from the transformation matrices
-    scaling_factors = vecnorm(tr(1:3, 1:3, i));
+for i = 1:size(tr, 3)-1
+    % Calculate the midpoint as the position for the ellipsoid
+    midpoint = (tr(1:3, 4, i) + tr(1:3, 4, i+1)) / 2;
 
-    % Define radii for the ellipsoid based on scaling factors
-    radius_x = 0.2 * scaling_factors(1); 
-    radius_y = 0.15 * scaling_factors(2); 
-    radius_z = 0.1 * scaling_factors(3); 
+    % Calculate the size of the ellipsoid using the start and end transforms
+    start_point = tr(1:3, 4, i);
+    end_point = tr(1:3, 4, i+1);
+    a = 1.05 * norm(end_point - start_point) / 2; % Increase semi-major axis by 5%
+    b = 0.05; % Semi-minor axis
+    c = 0.05; % Another semi-minor axis (ellipsoid can be oriented differently)
 
-    % Generate points on the unit ellipsoid
-    [x, y, z] = ellipsoid(0, 0, 0, 1, 1, 1); % Unit ellipsoid
+    % Create a mesh grid to represent an ellipsoid
+    [x, y, z] = ellipsoid(0, 0, 0, a, b, c, 20); % Use ellipsoid function
 
-    % Scale the ellipsoid according to the extracted radii
-    x = x * radius_x;
-    y = y * radius_y;
-    z = z * radius_z;
+    % Transform the ellipsoid vertices to the midpoint
+    ellipsoid_vertices = [x(:) y(:) z(:)]; % Vertices as rows
+    transformed_vertices = (tr(1:3, 1:3, i) * ellipsoid_vertices')' + midpoint';
 
-    % Apply the transformation to the ellipsoid points
-    ellipsoid_points = tr(1:3, 1:3, i) * [x(:)'; y(:)'; z(:)'];
-    ellipsoid_points = reshape(ellipsoid_points', size(x, 1), size(x, 2), 3);
+    % Reshape the vertices back into the ellipsoid structure
+    x_new = reshape(transformed_vertices(:, 1), size(x));
+    y_new = reshape(transformed_vertices(:, 2), size(y));
+    z_new = reshape(transformed_vertices(:, 3), size(z));
 
-    % Translate and reposition the ellipsoid to the midpoint
-    x = ellipsoid_points(:, :, 1) + midpoint(1);
-    y = ellipsoid_points(:, :, 2) + midpoint(2);
-    z = ellipsoid_points(:, :, 3) + midpoint(3);
-
-    % Plot the ellipsoid
-    surf(x, y, z, 'FaceAlpha', 0.3, 'EdgeColor', 'none');
+    % Plot the ellipsoid at the midpoint
+    surf(x_new, y_new, z_new, 'FaceColor', 'g', 'FaceAlpha', 0.3, 'EdgeColor', 'none');
 end
+
+xlabel('X');
+ylabel('Y');
+zlabel('Z');
+
+%% detecting collision
 
 %% another version
 % hold on;
