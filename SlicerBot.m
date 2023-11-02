@@ -280,6 +280,9 @@ classdef SlicerBot < handle
             % cut one
             tfMatrix = ctraj(p01,p02,steps);   
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
                 q2 = qMatrix(i,:);
             end
@@ -300,6 +303,9 @@ classdef SlicerBot < handle
             % cut two
             tfMatrix = ctraj(p10,p11,steps);   
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
                 q2 = qMatrix(i,:);
             end
@@ -319,6 +325,9 @@ classdef SlicerBot < handle
             % cut three
             tfMatrix = ctraj(p05,p04,steps);   
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
                 q2 = qMatrix(i,:);
             end
@@ -339,6 +348,9 @@ classdef SlicerBot < handle
             % cut four
             tfMatrix = ctraj(p07,p08,steps);   
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
                 q2 = qMatrix(i,:);
             end
@@ -354,15 +366,14 @@ classdef SlicerBot < handle
         % step through slicing procedure
         function stepSlicing(self,qMatrix)
             for i = 1:length(qMatrix)
+                if self.EStopCheck()
+                    return
+                end
                 self.robot.model.animate(qMatrix(i,:));
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
                 self.gripper.base(ee,'closed')
                 drawnow();
             end
         end
-    end
-
-    methods (Static)   
-        
     end
 end
