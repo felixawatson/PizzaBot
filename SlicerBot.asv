@@ -65,7 +65,8 @@ classdef SlicerBot < handle
                         self.gripper.base(ee,'open')
                 end                 
                 if cutter == 0
-                    drawnow()
+                    drawnow
+                    return                
                 else
                     self.cutter.model.base = ee;
                     self.cutter.model.animate(0)
@@ -184,7 +185,7 @@ classdef SlicerBot < handle
                 end
                 
                 if cutter == 0
-                    drawnow()
+                    return
                 else
                 self.cutter.model.base = ee;
                 self.cutter.model.animate(0)
@@ -425,7 +426,7 @@ classdef SlicerBot < handle
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
                 self.gripper.base(ee,'closed')
                 if cutter == 0
-                    drawnow()
+                    return
                 else
                 self.cutter.model.base = ee; 
                 self.cutter.model.animate(0)
