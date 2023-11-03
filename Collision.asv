@@ -3,7 +3,7 @@ close all
 clc
 
 robot = UR3;
-q = [0.5, 0.5, 0.7, 0, 0, 0];
+q = [0, 0, 0, 0, 0, 0];
 
 % get transforms
 tr = zeros(4,4,robot.model.n+1);
@@ -30,49 +30,80 @@ hold on;
 %% Placing prisms
 
 for i = 1:size(tr, 3)-1
-    % Calculate the size of the cuboid using the start and end transforms
+    % Calculate the midpoint as the position for the ellipsoid
+    midpoint = (tr(1:3, 4, i) + tr(1:3, 4, i+1)) / 2;
+
+    % Calculate the size of the ellipsoid using the start and end transforms
     start_point = tr(1:3, 4, i);
     end_point = tr(1:3, 4, i+1);
-    length_x = norm(end_point - start_point);
-    width_y = 0.1;
-    height_z = 0.1;
-    
-    % Define the cuboid vertices in its local space
-    vertices = [
-        length_x / 2, -width_y / 2, -height_z / 2; % Front top right
-        length_x / 2, -width_y / 2, height_z / 2;  % Front bottom right
-        length_x / 2, width_y / 2, -height_z / 2;  % Front top left
-        length_x / 2, width_y / 2, height_z / 2;   % Front bottom left
-        -length_x / 2, -width_y / 2, -height_z / 2;% Back top right
-        -length_x / 2, -width_y / 2, height_z / 2; % Back bottom right
-        -length_x / 2, width_y / 2, -height_z / 2; % Back top left
-        -length_x / 2, width_y / 2, height_z / 2;  % Back bottom left
-    ];
+    a = 1.05 * norm(end_point - start_point) / 2; % Increase semi-major axis by 5%
+    b = 0.05; % Semi-minor axis
+    c = 0.05; % Another semi-minor axis (ellipsoid can be oriented differently)
 
-    % Calculate the transformation matrix for this segment
-    segment_transform = tr(:, :, i);
+    % Create a mesh grid to represent an ellipsoid
+    [x, y, z] = ellipsoid(0, 0, 0, a, b, c, 20); % Use ellipsoid function
 
-    % Rotate the cuboid vertices and translate based on the start point
-    rotatedVertices = (segment_transform(1:3, 1:3) * vertices')' + segment_transform(1:3, 4)';
+    % Transform the ellipsoid vertices to the midpoint
+    ellipsoid_vertices = [x(:) y(:) z(:)]; % Vertices as rows
+    transformed_vertices = (tr(1:3, 1:3, i) * ellipsoid_vertices')' + midpoint';
 
-    % Plot the cuboid
-    cuboid_faces = [
-        1 2 4 3; % Front
-        1 2 6 5; % Right
-        5 6 8 7; % Back
-        3 4 8 7; % Left
-        1 3 7 5; % Top
-        2 4 8 6; % Bottom
-    ];
+    % Reshape the vertices back into the ellipsoid structure
+    x_new = reshape(transformed_vertices(:, 1), size(x));
+    y_new = reshape(transformed_vertices(:, 2), size(y));
+    z_new = reshape(transformed_vertices(:, 3), size(z));
 
-    patch('Vertices', rotatedVertices, 'Faces', cuboid_faces, 'FaceColor', 'g', 'FaceAlpha', 0.3, 'EdgeColor', 'none');
+    % Plot the ellipsoid at the midpoint
+    surf(x_new, y_new, z_new, 'FaceColor', 'g', 'FaceAlpha', 0.3, 'EdgeColor', 'none');
 end
 
 xlabel('X');
 ylabel('Y');
 zlabel('Z');
 
+%% detecting collision
+% Define ellipsoid centers and radii (example data, please replace with actual values)
+ellipsoid_centers = midpoints(:, 2:end); 
+ellipsoid_radii = [repmat([a, b, c], size(ellipsoid_centers, 2), 1)]; % Replace with actual radii
 
+% Open and read the .ply file
+fid = fopen('your_ply_file.ply', 'r');
+
+% Skip header information until reaching vertex data
+while ~feof(fid)
+    tline = fgetl(fid);
+    if contains(tline, 'end_header')
+        break;
+    end
+end
+
+% Read vertex data
+vertex_data = [];
+while ~feof(fid)
+    tline = fgetl(fid);
+    vertex = sscanf(tline, '%f %f %f');
+    vertex_data = [vertex_data; vertex'];
+end
+
+fclose(fid);
+
+% Use the vertex_data variable containing the vertex coordinates for collision detection
+for i = 1:size(vertex_data, 1)
+    point = vertex_data(i, :);
+    
+    % Check for collision with ellipsoids
+    for j = 1:size(ellipsoid_centers, 2)
+        % Calculate the distance from the ellipsoid center to the point
+        distances = (point - ellipsoid_centers(:, j)).^2 ./ ellipsoid_radii(j).^2;
+        distance_sum = sum(distances);
+        
+        % If the sum of distances is less than 1, collision is detected
+        if distance_sum < 1
+            disp(['Collision detected at vertex ', num2str(i), ' with ellipsoid ', num2str(j)]);
+            % Take action upon collision detection
+            % For instance, break the loop or store collision information
+        end
+    end
+end
 %% another version
 % hold on;
 % 
