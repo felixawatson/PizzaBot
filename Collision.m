@@ -61,7 +61,53 @@ ylabel('Y');
 zlabel('Z');
 
 %% detecting collision
+% Read the PLY file and extract vertices
+fid = fopen('environment.ply', 'r');
+vertex_data = [];
 
+while fid > 0 && ~feof(fid)
+    tline = fgetl(fid);
+    if contains(tline, 'end_header')
+        break;  % Move to vertex data
+    end
+end
+
+while fid > 0 && ~feof(fid)
+    tline = fgetl(fid);
+    vertex = sscanf(tline, '%f %f %f')';
+    if ~isempty(vertex)
+        % Check if the size of vertex matches the expected size (3 elements for x, y, z)
+        if numel(vertex) == 3
+            vertex_data = [vertex_data; vertex];
+        end
+    end
+end
+
+fclose(fid);
+
+% Create a point cloud using the extracted vertices
+ptCloud = pointCloud(vertex_data);
+
+for i = 2:size(ellipsoid_centers, 1)
+    % Get current ellipsoid parameters
+    ellipsoid_center = ellipsoid_centers(i, :);
+    ellipsoid_radii = ellipsoid_radii(i, :);
+    rotmat = rotmats{i};
+
+    % Transform point cloud data to ellipsoid frame of reference
+    T = affine3d([rotmat, ellipsoid_center; 0 0 0 1]');
+    ptCloudTransformed = pctransform(ptCloud, T);
+
+    % Find points inside the current ellipsoid
+    indices = findPointsInROI(ptCloudTransformed, ellipsoid_radii);
+
+    if ~isempty(indices)
+        fprintf('Collision detected between ellipsoid %d and point cloud!\n', i);
+        disp('List of indices of points inside the ellipsoid:');
+        disp(indices);
+        % You might perform additional actions here, such as visualization or further processing
+    end
+end
 %% another version
 % hold on;
 % 
