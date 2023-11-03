@@ -6,25 +6,58 @@ classdef SlicerBot < handle
     properties
         robot;
         gripper;
+        cutter;
+        cutteroffset = [0,0,0.1];%*troty(pi);
         base = [-1,-1,0.4]; % approx
         home = deg2rad([-120,-90,60,-60,-90,0]);
         eStop = 0;
+        cancelDemo = 0;        
         step = 50;
-        cancelDemo = 0;
+
     end
 
     methods
         % constructor
         function self = SlicerBot()
             %create a self.robot with a pizza slicer attachment
-            self.robot = UR3;
-            self.robot.model.base = self.base;
+            
+            self.robot = UR3(transl(self.base(1), self.base(2), self.base(3)));
             self.robot.model.animate(self.home);
             ee = self.robot.model.fkine(self.robot.model.getpos);
             
             self.gripper = ur3gripper;
             self.gripper.base(ee,'open');
             self.gripper.open();
+
+            self.cutter = cutter;
+            self.cutter.model.base = transl([-1.35,-0.7,0.61])*troty(pi);
+            self.cutter.model.animate(0);
+        end
+
+        % Move to home position
+        function Home(self,cutter)
+            steps = self.step;
+            q1 = self.robot.model.getpos;
+            q2 = self.home; 
+            qMatrix = jtraj(q1,q2,steps);  
+
+            for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
+                self.robot.model.animate(qMatrix(i,:));
+                %animate gripper
+                ee = self.robot.model.fkine(self.robot.model.getpos);  
+                self.gripper.base(ee,'open')
+                 
+                if cutter == 1
+                    self.cutter.model.base = ee; %* transl(self.cutteroffset); 
+                    self.cutter.model.animate(0)
+                else  
+                end 
+                
+                drawnow()
+            end
         end
 
         % get transform
@@ -113,28 +146,38 @@ classdef SlicerBot < handle
         end
 
         % joint movement path
-        function JointMove(self,transform)
-            steps = 100;
+        function JointMove(self,transform,grip,cutter)
+            steps = self.step;
             q1 = self.robot.model.getpos;
             q2 = self.robot.model.ikcon(transform,q1); 
             qMatrix = jtraj(q1,q2,steps);  
         
 
-            for i = 1:self.step
+            for i = 1:steps
                 if self.EStopCheck()
                     return
                 end
                 self.robot.model.animate(qMatrix(i,:));
                 %animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
+                switch grip
+                    case 
                 self.gripper.base(ee,'open')
+                
+                if cutter == 0
+                    drawnow()
+                    return
+                else
+                self.cutter.model.base = ee; %* transl(self.cutteroffset); 
+                self.cutter.model.animate(0)
+                end
                 drawnow()
             end
         end
         
         % cartesian movement path (not tested)
         function CartesianMove(self,transform)
-            steps = 100;
+            steps = self.step;
             q1 = self.robot.model.getpos;            
             tf1 = self.robot.model.fkine(q1).T;
             tfMatrix = ctraj(tf1,transform,steps);    
@@ -154,7 +197,7 @@ classdef SlicerBot < handle
 
         % jogs robot in cartesian frame
         function CartJogRobot(self,direction)
-            steps = 50;
+            steps = self.step;
             distance = 0.1;
             q1 = self.robot.model.getpos();
             tf = self.robot.model.fkine(q1).T;
@@ -208,7 +251,8 @@ classdef SlicerBot < handle
             self.gripper.base(ee,'open');
             drawnow()
         end
-
+        
+        % estop function
         function cancel = EStopCheck(self)
             while self.eStop
                 pause(0.5);
@@ -225,7 +269,7 @@ classdef SlicerBot < handle
         function [jointstates] = CalculateCut(self)
             steps = 50; % change interpolation
             rad = 0.3/2; % size of pizza
-            center = [-0.8,-0.7,0.5]; % pizza center
+            center = [-0.8,-0.7,0.6]; % pizza center
             diag = rad*sin(pi/4);
             tf = transl(center - [0,0,0]);
 
@@ -260,6 +304,9 @@ classdef SlicerBot < handle
             % cut one
             tfMatrix = ctraj(p01,p02,steps);   
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
                 q2 = qMatrix(i,:);
             end
@@ -280,6 +327,9 @@ classdef SlicerBot < handle
             % cut two
             tfMatrix = ctraj(p10,p11,steps);   
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
                 q2 = qMatrix(i,:);
             end
@@ -299,6 +349,9 @@ classdef SlicerBot < handle
             % cut three
             tfMatrix = ctraj(p05,p04,steps);   
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
                 q2 = qMatrix(i,:);
             end
@@ -319,6 +372,9 @@ classdef SlicerBot < handle
             % cut four
             tfMatrix = ctraj(p07,p08,steps);   
             for i = 1:steps
+                if self.EStopCheck()
+                    return
+                end
                 qMatrix(i,:) = self.robot.model.ikcon(tfMatrix(:,:,i),q2);
                 q2 = qMatrix(i,:);
             end
@@ -332,17 +388,23 @@ classdef SlicerBot < handle
         end
     
         % step through slicing procedure
-        function stepSlicing(self,qMatrix)
+        function stepSlicing(self,qMatrix,cutter)
             for i = 1:length(qMatrix)
+                if self.EStopCheck()
+                    return
+                end
                 self.robot.model.animate(qMatrix(i,:));
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
                 self.gripper.base(ee,'closed')
+                if cutter == 0
+                    drawnow()
+                    return
+                else
+                self.cutter.model.base = ee; %* transl(self.cutteroffset); 
+                self.cutter.model.animate(0)
+                end
                 drawnow();
             end
         end
-    end
-
-    methods (Static)   
-        
     end
 end

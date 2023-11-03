@@ -52,6 +52,7 @@ classdef KitchenDemo < handle
             PlaceObject('fireex.ply', [(axis(2)-0.1), (axis(4)-0.7), 0]);    
             PlaceObject('light.ply', [(axis(2)-0.125), (axis(4)-0.1), 0.95]);
             PlaceObject('light.ply', [(axis(1)+0.15), (axis(4)-0.4), 0.4]);
+            PlaceObject('cutter holder.ply',[-1.35,-0.7,0.4]);
 
             self.X = [axis(1), axis(2), axis(2), axis(1), axis(1), axis(2), axis(2), axis(1)];
             self.Y = [axis(3), axis(3), axis(4), axis(4), axis(3), axis(3), axis(4), axis(4)];

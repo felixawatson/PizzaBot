@@ -24,8 +24,8 @@ classdef ur3gripper < handle
         
         % close cripper
         function closed(self)
-            closedL = deg2rad([0 -20]);
-            closedR = deg2rad([0 20]);
+            closedL = deg2rad([0 -10]);
+            closedR = deg2rad([0 10]);
             self.gripperL.model.animate(closedL);
             self.gripperR.model.animate(closedR);
         end

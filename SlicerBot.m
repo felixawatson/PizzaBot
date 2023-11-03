@@ -6,6 +6,8 @@ classdef SlicerBot < handle
     properties
         robot;
         gripper;
+        cutter;
+        cutteroffset = [0,0,0.1];%*troty(pi);
         base = [-1,-1,0.4]; % approx
         home = deg2rad([-120,-90,60,-60,-90,0]);
         eStop = 0;
@@ -26,10 +28,14 @@ classdef SlicerBot < handle
             self.gripper = ur3gripper;
             self.gripper.base(ee,'open');
             self.gripper.open();
+
+            self.cutter = cutter;
+            self.cutter.model.base = transl([-1.35,-0.7,0.61])*troty(pi);
+            self.cutter.model.animate(0);
         end
 
         % Move to home position
-        function Home(self)
+        function Home(self,grip,cutter)
             steps = self.step;
             q1 = self.robot.model.getpos;
             q2 = self.home; 
@@ -42,7 +48,20 @@ classdef SlicerBot < handle
                 self.robot.model.animate(qMatrix(i,:));
                 %animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
-                self.gripper.base(ee,'open')
+                switch grip
+                    case 'open'
+                        self.gripper.base(ee,'open')
+                    case 'closed'
+                        self.gripper.base(ee,'closed')
+                    otherwise
+                        self.gripper.base(ee,'open')
+                end                 
+                if cutter == 0
+                    drawnow()
+                else
+                    self.cutter.model.base = ee; %* transl(self.cutteroffset); 
+                    self.cutter.model.animate(0)
+                end
                 drawnow()
             end
         end
@@ -133,7 +152,7 @@ classdef SlicerBot < handle
         end
 
         % joint movement path
-        function JointMove(self,transform)
+        function JointMove(self,transform,grip,cutter)
             steps = self.step;
             q1 = self.robot.model.getpos;
             q2 = self.robot.model.ikcon(transform,q1); 
@@ -147,7 +166,22 @@ classdef SlicerBot < handle
                 self.robot.model.animate(qMatrix(i,:));
                 %animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
-                self.gripper.base(ee,'open')
+                switch grip
+                    case 'open'
+                        self.gripper.base(ee,'open')
+                    case 'closed'
+                        self.gripper.base(ee,'closed')
+                    otherwise
+                        self.gripper.base(ee,'open')
+                end
+                
+                if cutter == 0
+                    drawnow()
+                    return
+                else
+                self.cutter.model.base = ee; %* transl(self.cutteroffset); 
+                self.cutter.model.animate(0)
+                end
                 drawnow()
             end
         end
@@ -228,7 +262,8 @@ classdef SlicerBot < handle
             self.gripper.base(ee,'open');
             drawnow()
         end
-
+        
+        % estop function
         function cancel = EStopCheck(self)
             while self.eStop
                 pause(0.5);
@@ -245,7 +280,7 @@ classdef SlicerBot < handle
         function [jointstates] = CalculateCut(self)
             steps = 50; % change interpolation
             rad = 0.3/2; % size of pizza
-            center = [-0.8,-0.7,0.5]; % pizza center
+            center = [-0.8,-0.7,0.65]; % pizza center
             diag = rad*sin(pi/4);
             tf = transl(center - [0,0,0]);
 
@@ -364,7 +399,7 @@ classdef SlicerBot < handle
         end
     
         % step through slicing procedure
-        function stepSlicing(self,qMatrix)
+        function stepSlicing(self,qMatrix,cutter)
             for i = 1:length(qMatrix)
                 if self.EStopCheck()
                     return
@@ -372,6 +407,13 @@ classdef SlicerBot < handle
                 self.robot.model.animate(qMatrix(i,:));
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
                 self.gripper.base(ee,'closed')
+                if cutter == 0
+                    drawnow()
+                    return
+                else
+                self.cutter.model.base = ee; %* transl(self.cutteroffset); 
+                self.cutter.model.animate(0)
+                end
                 drawnow();
             end
         end

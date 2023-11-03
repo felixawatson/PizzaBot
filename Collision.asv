@@ -2,8 +2,8 @@ clear all
 close all
 clc
 
-robot = IRB1200H;
-q = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
+robot = UR3;
+q = [0.5, 0.5, 0.7, 0, 0, 0];
 
 % get transforms
 tr = zeros(4,4,robot.model.n+1);
@@ -23,40 +23,87 @@ end
 % Display midpoints
 disp("Midpoints of each link:");
 disp(midpoints);
+% Provided transformation matrices 'tr'
 
 hold on;
 
-% Plot ellipsoids representing the links
-for i = 1:size(midpoints, 2) - 1 % Iterate through each link segment
-    % Calculate the distance and direction between consecutive midpoints
-    segment_vector = midpoints(:, i + 1) - midpoints(:, i);
-    segment_length = norm(segment_vector);
-    segment_direction = segment_vector / segment_length;
+%% Placing prisms
 
-    % Extract the scaling factors (dimensions) from the transformation matrices
-    scaling_factors = tr(1:3, 1:3, i);
+for i = 1:size(tr, 3)-1
+    % Calculate the size of the cuboid using the start and end transforms
+    start_point = tr(1:3, 4, i);
+    end_point = tr(1:3, 4, i+1);
+    length_x = norm(end_point - start_point);
+    width_y = 0.1;
+    height_z = 0.1;
+    
+    % Define the cuboid vertices in its local space
+    vertices = [
+        length_x / 2, -width_y / 2, -height_z / 2; % Front top right
+        length_x / 2, -width_y / 2, height_z / 2;  % Front bottom right
+        length_x / 2, width_y / 2, -height_z / 2;  % Front top left
+        length_x / 2, width_y / 2, height_z / 2;   % Front bottom left
+        -length_x / 2, -width_y / 2, -height_z / 2;% Back top right
+        -length_x / 2, -width_y / 2, height_z / 2; % Back bottom right
+        -length_x / 2, width_y / 2, -height_z / 2; % Back top left
+        -length_x / 2, width_y / 2, height_z / 2;  % Back bottom left
+    ];
 
-    % Use the scaling factors to determine the size of the ellipsoid
-    scaling_factor = norm(scaling_factors * [1; 1; 1]);
+    % Calculate the transformation matrix for this segment
+    segment_transform = tr(:, :, i);
 
-    midpoint = (midpoints(:, i) + midpoints(:, i + 1)) / 2; % Midpoint of the segment
+    % Rotate the cuboid vertices and translate based on the start point
+    rotatedVertices = (segment_transform(1:3, 1:3) * vertices')' + segment_transform(1:3, 4)';
 
-    % Generate a unit sphere
-    [x, y, z] = sphere(20);
+    % Plot the cuboid
+    cuboid_faces = [
+        1 2 4 3; % Front
+        1 2 6 5; % Right
+        5 6 8 7; % Back
+        3 4 8 7; % Left
+        1 3 7 5; % Top
+        2 4 8 6; % Bottom
+    ];
 
-    % Scale and transform the sphere to form an ellipsoid
-    x = x * (scaling_factor / 2) * segment_length + midpoint(1);
-    y = y * (scaling_factor / 2) * segment_length + midpoint(2);
-    z = z * (scaling_factor / 2) * segment_length + midpoint(3);
-
-    % Plot the ellipsoid
-    surf(x, y, z, 'FaceAlpha', 0.3, 'EdgeColor', 'none');
+    patch('Vertices', rotatedVertices, 'Faces', cuboid_faces, 'FaceColor', 'g', 'FaceAlpha', 0.3, 'EdgeColor', 'none');
 end
 
 xlabel('X');
 ylabel('Y');
 zlabel('Z');
 
+
+%% another version
+% hold on;
+% 
+% % Plot ellipsoids representing the links
+% for i = 1:size(midpoints, 2) - 1 % Iterate through each link segment
+%     % Calculate the distance and direction between consecutive midpoints
+%     segment_vector = midpoints(:, i + 1) - midpoints(:, i);
+%     segment_length = norm(segment_vector);
+%     segment_direction = segment_vector / segment_length;
+% 
+%     % Extract the scaling factors (dimensions) from the transformation matrices
+%     scaling_factors = tr(1:3, 1:3, i);
+% 
+%     % Use the scaling factors to determine the size of the ellipsoid
+%     scaling_factor = norm(scaling_factors * [1; 1; 1]);
+% 
+%     midpoint = (midpoints(:, i) + midpoints(:, i + 1)) / 2; % Midpoint of the segment
+% 
+%     % Generate a unit sphere
+%     [x, y, z] = sphere(20);
+% 
+%     % Scale and transform the sphere to form an ellipsoid
+%     x = x * (scaling_factor / 2) * segment_length + midpoint(1);
+%     y = y * (scaling_factor / 2) * segment_length + midpoint(2);
+%     z = z * (scaling_factor / 2) * segment_length + midpoint(3);
+% 
+%     % Plot the ellipsoid
+%     surf(x, y, z, 'FaceAlpha', 0.3, 'EdgeColor', 'none');
+% end
+
+%% another version
 % radiusX = 0.15; % Change the radius value according to your robot's dimensions (X-axis)
 % radiusY = 0.1; % Change the radius value according to your robot's dimensions (Y-axis)
 % radiusZ = 0.4; % Change the radius value according to your robot's dimensions (Z-axis)
