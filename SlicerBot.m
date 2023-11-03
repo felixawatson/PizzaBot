@@ -280,7 +280,7 @@ classdef SlicerBot < handle
         function [jointstates] = CalculateCut(self)
             steps = 50; % change interpolation
             rad = 0.3/2; % size of pizza
-            center = [-0.8,-0.7,0.6]; % pizza center
+            center = [-0.8,-0.7,0.65]; % pizza center
             diag = rad*sin(pi/4);
             tf = transl(center - [0,0,0]);
 
