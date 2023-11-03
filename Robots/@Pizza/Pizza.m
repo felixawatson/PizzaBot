@@ -7,12 +7,14 @@ classdef Pizza < RobotBaseClass
     end
     
     methods
+        % Constructor
         function self = Pizza(baseTr, toppings)
             if nargin < 2
                 if nargin == 0
                     baseTr = transl(0,0,0);                
                 end
             else
+            % Graphical model changes based on selected pizza
             self.plyFileNameStem = toppings;
             end 
             self.CreateModel();
@@ -21,7 +23,7 @@ classdef Pizza < RobotBaseClass
         end
 
         function CreateModel(self)
-            % single link 'robot'
+            % Single link 'robot'
             link(1) = Link([0  0  0  0  0]);
             self.model = SerialLink(link, 'name', self.name);
         end

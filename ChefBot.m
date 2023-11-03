@@ -4,48 +4,51 @@ classdef ChefBot < handle
     % the oven to be cooked. Once cooked the pizza is placed in front of
     % the slicer bot
 
-    % movement through functions might make it difficult to animate grippers and
-    % pizza staying on the ee, 
-
     properties
-        robot; 
-        gripper;
+        robot; % Base robot used for Chefbot
+        gripper; % Gripper (actually a pizza scoop)
         eescoopoffset = transl([-0.05,0,0.35]);
-        home = [-pi/2 -pi/4 3*pi/4 0 0 0];
-        eStop = 0;
-        cancelDemo = 0;
-        step = 50;
+        home = [-pi/2 -pi/4 3*pi/4 0 0 0]; % Home joint positions
+        eStop = 0; % Estop flag
+        cancelDemo = 0; % Demo cancelled flag
+        step = 50; % Number of steps during path movement
     end
 
     methods
-        % constructor
+        % Constructor
         function self = ChefBot()
-            % create IRB1200 with gripper
+            % Create IRB1200 with gripper
             self.robot = IRB1200H();
             self.robot.model.animate(self.home);
+            % Get position of the end effector
             ee = self.robot.model.fkine(self.robot.model.getpos);
+            % Create scoop object
             self.gripper = scoop;
+            % Add scoop on the end of the robot
             self.gripper.model.base = ee;
             self.gripper.model.animate(0);
         end
 
-        % collision avoidance
+        % Collision avoidance
         function ObjectAvoidance(self)
         end
 
         % Move to home position
         function Home(self)
+            % Plan path
             steps = self.step;
             q1 = self.robot.model.getpos;
             q2 = self.home; 
             qMatrix = jtraj(q1,q2,steps);  
-
+            
+            % Move to home position
             for i = 1:steps
+                % Check Estop flag
                 if self.EStopCheck()
                     return
                 end
                 self.robot.model.animate(qMatrix(i,:));
-                %animate gripper
+                % Animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos); 
                 self.gripper.model.base = ee;
                 self.gripper.model.animate(0);
@@ -53,7 +56,7 @@ classdef ChefBot < handle
             end
         end
 
-        % calculate motion
+        % Calculate motion
         function [qMatrix] = CalcMotion(self,transform)
             steps = self.step;
             q1 = self.robot.model.getpos;
@@ -61,11 +64,15 @@ classdef ChefBot < handle
             qMatrix = jtraj(q1,q2,steps);  
         end
 
-        % animate calculated motion
+        % Animate calculated motion
         function stepCalcMotion(self,qMatrix,pizza)
             for i = 1:length(qMatrix)
+                % Check Estop flag
+                if self.EStopCheck()
+                    return
+                end
                 self.robot.model.animate(qMatrix(i,:));
-                %animate gripper
+                % Animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos); 
                 self.gripper.model.base = ee;
                 self.gripper.model.animate(0);
@@ -79,7 +86,7 @@ classdef ChefBot < handle
 
         % Resolved Motion Rate Control
         function [qMatrix] = RMRC(self,qMatrix)
-            % 1.1) Set parameters for the simulation
+            % Set parameters for the simulation
             t = 10;                             % Total time (s)
             steps = length(qMatrix);                        % No. of steps for simulation
             deltaT = t/steps;                   % Control frequency
@@ -87,7 +94,7 @@ classdef ChefBot < handle
             epsilon = 0.1;                      % Threshold value for manipulability/Damped Least Squares
             W = diag([1 1 1 1 1 1]);      % Weighting matrix for the velocity vector
             
-            % 1.2) Allocate array data
+            % Allocate array data
             m = zeros(steps,1);                 % Array for Measure of Manipulability
             qdot = zeros(steps,6);              % Array for joint velocities
             theta = zeros(3,steps);             % Array for roll-pitch-yaw angles
@@ -95,7 +102,7 @@ classdef ChefBot < handle
             positionError = zeros(3,steps);     % For plotting trajectory error
             angleError = zeros(3,steps);        % For plotting trajectory error
             
-            % 1.3) Set up trajectory, initial pose
+            % Set up trajectory, initial pose
             for i=1:steps
                 tr = self.robot.model.fkine(qMatrix(i,:)).T;
                 rpy = tr2rpy(tr);
@@ -111,7 +118,7 @@ classdef ChefBot < handle
             q0 = qMatrix(1,:);                                                            % Initial guess for joint angles
             qMatrix(1,:) = self.robot.model.ikcon(T,q0);                                % Solve joint angles to achieve first waypoint
             
-            % 1.4) Track the trajectory with RMRC
+            % Track the trajectory with RMRC
             for i = 1:steps-1
                 % UPDATE: fkine function now returns an SE3 object. To obtain the 
                 % Transform Matrix, access the variable in the object 'T' with '.T'.
@@ -145,7 +152,7 @@ classdef ChefBot < handle
             end
         end
         
-        % get transform
+        % Get transform
         function [tf] = gettransform(self,q)
             if q == 0
                 q1 = self.robot.model.getpos;            
@@ -155,7 +162,7 @@ classdef ChefBot < handle
             end
         end
 
-        % joint movement path
+        % Joint movement path, gets EE to given position
         function JointMove(self,transform,pizza)
             steps = self.step;
             q1 = self.robot.model.getpos;
@@ -178,7 +185,7 @@ classdef ChefBot < handle
             end
         end
 
-        % cartesian movement path 
+        % Cartesian movement path moves end effector in X,Y or Z plane
         function CartesianMove(self,transform,pizza)
             steps = self.step;
             q1 = self.robot.model.getpos;            
@@ -246,15 +253,15 @@ classdef ChefBot < handle
             end
         end
         
-        % jogs robots joints using a slider
+        % Jogs robots joints using a slider
         function JointJogRobot(self,joint,sliderVal)
             
-            % get current joint states
+            % Get current joint states
             q1 = self.robot.model.getpos();
-            % update to slider value
+            % Update to slider value
             q1(1,joint) = deg2rad(sliderVal);
             
-            % animate
+            % Animate
             self.robot.model.animate(q1);
             ee = self.robot.model.fkine(self.robot.model.getpos);  
             self.gripper.model.base = ee;
@@ -262,17 +269,21 @@ classdef ChefBot < handle
             drawnow()
         end
 
+
+        % Estop function
         function cancel = EStopCheck(self)
+            % While the Estop is active, wait here
             while self.eStop
+                % Pause allows other functionality to continue
                 pause(0.5);
             end
-            
+            % If the demo is confirmed as cancelled then raise flag
             if self.cancelDemo
                 cancel = true;
+            % Otherwise program continues
             else
                 cancel = false;
             end
-            self.cancelDemo = 0;
         end
     end
 end

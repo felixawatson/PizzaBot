@@ -1,52 +1,60 @@
 classdef SlicerBot < handle
     %% Class for pizza cutting robot
-    % uses visual servoing to detect when a pizza is in front of it and
-    % cut it into 8 equal slices
+    % Cuts the pizza into 8 equal slices
 
     properties
-        robot;
-        gripper;
-        cutter;
-        cutteroffset = [0,0,0.1];%*troty(pi);
-        base = [-1,-1,0.4]; % approx
-        home = deg2rad([-120,-90,60,-60,-90,0]);
-        eStop = 0;
-        cancelDemo = 0;        
-        step = 50;
+        robot; % Base robot used for the slicer bot
+        gripper; % Gripper on end effector of the robot
+        cutter; % Pizza cutter object to be wielded
+        cutteroffset = [0,0,0.1];
+        base = [-1,-1,0.4]; % Approximate base position
+        home = deg2rad([-120,-90,60,-60,-90,0]); % Home joint positions
+        eStop = 0; % Estop flag
+        cancelDemo = 0; % Demo cancelled flag   
+        step = 50; % Number of steps for joint movements
 
     end
 
     methods
-        % constructor
+        % Constructor
+        %create a self.robot with a pizza slicer attachment
         function self = SlicerBot()
-            %create a self.robot with a pizza slicer attachment
-            
+            % Spawn in UR3 to desired location
             self.robot = UR3(transl(self.base(1), self.base(2), self.base(3)));
+            % Rotate joints to home position
             self.robot.model.animate(self.home);
+            % Determine end effector position of the UR3
             ee = self.robot.model.fkine(self.robot.model.getpos);
             
+            % Create a gripper object
             self.gripper = ur3gripper;
+            % Set gripper position to open
             self.gripper.base(ee,'open');
             self.gripper.open();
 
+            % Create a cutter object
             self.cutter = cutter;
+            % Place cutter into holder position
             self.cutter.model.base = transl([-1.35,-0.7,0.61])*troty(pi);
             self.cutter.model.animate(0);
         end
 
-        % Move to home position
+        % Move to home joint position
         function Home(self,grip,cutter)
+            % Path plan
             steps = self.step;
             q1 = self.robot.model.getpos;
             q2 = self.home; 
-            qMatrix = jtraj(q1,q2,steps);  
+            qMatrix = jtraj(q1,q2,steps);
 
+            % Move to home
             for i = 1:steps
+                % Estop flag check
                 if self.EStopCheck()
                     return
                 end
                 self.robot.model.animate(qMatrix(i,:));
-                %animate gripper
+                % Animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
                 switch grip
                     case 'open'
@@ -59,14 +67,14 @@ classdef SlicerBot < handle
                 if cutter == 0
                     drawnow()
                 else
-                    self.cutter.model.base = ee; %* transl(self.cutteroffset); 
+                    self.cutter.model.base = ee;
                     self.cutter.model.animate(0)
                 end
                 drawnow()
             end
         end
 
-        % get transform
+        % Get transform
         function [tf] = gettransform(self,q)
             if q == 0
                 q1 = self.robot.model.getpos;            
@@ -78,7 +86,7 @@ classdef SlicerBot < handle
 
         % RMRC 
         function [qMatrix] = RMRC(self,qMatrix)
-            % 1.1) Set parameters for the simulation
+            % Set parameters for the simulation
             t = 10;                             % Total time (s)
             steps = length(qMatrix);            % No. of steps for simulation
             deltaT = t/steps;                   % Control frequency
@@ -86,7 +94,7 @@ classdef SlicerBot < handle
             epsilon = 0.1;                      % Threshold value for manipulability/Damped Least Squares
             W = diag([ 1 1 0.1 0.1 0.1]);      % Weighting matrix for the velocity vector
             
-            % 1.2) Allocate array data
+            % Allocate array data
             m = zeros(steps,1);                 % Array for Measure of Manipulability
             qdot = zeros(steps,6);              % Array for joint velocities
             theta = zeros(3,steps);             % Array for roll-pitch-yaw angles
@@ -94,7 +102,7 @@ classdef SlicerBot < handle
             positionError = zeros(3,steps);     % For plotting trajectory error
             angleError = zeros(3,steps);        % For plotting trajectory error
             
-            % 1.3) Set up trajectory, initial pose
+            % Set up trajectory, initial pose
             for i=1:steps
                 tr = self.robot.model.fkine(qMatrix(i,:)).T;
                 rpy = tr2rpy(tr);
@@ -110,10 +118,8 @@ classdef SlicerBot < handle
             q0 = qMatrix(1,:);                                                            % Initial guess for joint angles
             qMatrix(1,:) = self.robot.model.ikcon(T,q0);                                % Solve joint angles to achieve first waypoint
             
-            % 1.4) Track the trajectory with RMRC
+            % Track the trajectory with RMRC
             for i = 1:steps-1
-                % UPDATE: fkine function now returns an SE3 object. To obtain the 
-                % Transform Matrix, access the variable in the object 'T' with '.T'.
                 T = self.robot.model.fkine(qMatrix(i,:)).T;                             % Get forward transformation at current joint state
                 deltaX = x(:,i+1) - T(1:3,4);                                         	% Get position error from next waypoint
                 Rd = rpy2r(theta(1,i+1),theta(2,i+1),theta(3,i+1));                     % Get next RPY angles, convert to rotation matrix
@@ -144,27 +150,29 @@ classdef SlicerBot < handle
             end
             for i = 1:length(qMatrix)
                 self.robot.model.animate(qMatrix(i,:));
-                %animate gripper
+                % Animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
                 self.gripper.base(ee,'closed')
                 drawnow()
             end
         end
 
-        % joint movement path
+        % Joint movement path
         function JointMove(self,transform,grip,cutter)
+            % Plan path
             steps = self.step;
             q1 = self.robot.model.getpos;
             q2 = self.robot.model.ikcon(transform,q1); 
             qMatrix = jtraj(q1,q2,steps);  
         
-
+            % Move joints
             for i = 1:steps
+                % Check Estop flag
                 if self.EStopCheck()
                     return
                 end
                 self.robot.model.animate(qMatrix(i,:));
-                %animate gripper
+                % Animate gripper
                 ee = self.robot.model.fkine(self.robot.model.getpos);  
                 switch grip
                     case 'open'
@@ -179,21 +187,24 @@ classdef SlicerBot < handle
                     drawnow()
                     return
                 else
-                self.cutter.model.base = ee; %* transl(self.cutteroffset); 
+                self.cutter.model.base = ee;
                 self.cutter.model.animate(0)
                 end
                 drawnow()
             end
         end
         
-        % cartesian movement path (not tested)
+        % Cartesian movement path
         function CartesianMove(self,transform)
+            % Plan path
             steps = self.step;
             q1 = self.robot.model.getpos;            
             tf1 = self.robot.model.fkine(q1).T;
             tfMatrix = ctraj(tf1,transform,steps);    
             
+            % Move in catersian plane
             for i = 1:steps
+                % Check Estop flag
                 if self.EStopCheck()
                     return
                 end
@@ -206,14 +217,16 @@ classdef SlicerBot < handle
             end
         end
 
-        % jogs robot in cartesian frame
+        % Jogs robot in cartesian frame 10cm given a certain direction
         function CartJogRobot(self,direction)
+            % Plan path
             steps = self.step;
             distance = 0.1;
             q1 = self.robot.model.getpos();
             tf = self.robot.model.fkine(q1).T;
             jog = tf;
-                        
+            
+            % Consider which direction was inputted
             switch direction
                 case '-x'
                     jog(1,4) = jog(1,4) - distance;
@@ -232,9 +245,11 @@ classdef SlicerBot < handle
             end
 
             qMatrix = zeros(steps,6);
-            tfMatrix = ctraj(tf,jog,steps);    
+            tfMatrix = ctraj(tf,jog,steps);  
 
+            % Move in cartesian direction
             for i = 1:steps
+                % Check Estop flag
                 if self.EStopCheck()
                     return
                 end
@@ -263,56 +278,59 @@ classdef SlicerBot < handle
             drawnow()
         end
         
-        % estop function
+        % Estop function
         function cancel = EStopCheck(self)
+            % While the Estop is active, wait here
             while self.eStop
+                % Pause allows other functionality to continue
                 pause(0.5);
             end
-            
+            % If the demo is confirmed as cancelled then raise flag
             if self.cancelDemo
                 cancel = true;
+            % Otherwise program continues
             else
                 cancel = false;
             end
         end
 
-        % calculate cut based on pizza position
+        % Calculate cut based on pizza position
         function [jointstates] = CalculateCut(self)
-            steps = 50; % change interpolation
-            rad = 0.3/2; % size of pizza
-            center = [-0.8,-0.7,0.65]; % pizza center
+            steps = 50; % Change interpolation
+            rad = 0.3/2; % Size of pizza
+            center = [-0.8,-0.7,0.65]; % Pizza center
             diag = rad*sin(pi/4);
             tf = transl(center - [0,0,0]);
 
-            % first cut
+            % First cut
             p01 = transl(center - [rad,0,0]) * trotx(pi);
             p02 = transl(center + [rad,0,0]) * trotx(pi);
             p03 = p02 * transl([0,0,-0.1]); % way point
-            % second cut
+            % Second cut
             p04 = transl(center - [0,rad,0]) * trotx(pi) * trotz(pi/2); % 8
             p05 = transl(center + [0,rad,0]) * trotx(pi) * trotz(pi/2); % 7
-            % third cut
+            % Third cut
             p07 = transl(center - [diag,diag,0]) * trotx(pi) * trotz(-pi/4); % 
             p08 = transl(center + [diag,diag,0]) * trotx(pi) * trotz(-pi/4); % 
-            p09 = p07 * transl([0,0,-0.1]); % way point
-            %fourth cut
+            p09 = p07 * transl([0,0,-0.1]); % Waypoint
+            % Fourth cut
             p10 = transl(center + [diag,-diag,0]) * trotx(pi) * trotz(pi/4); % 4
             p11 = transl(center + [-diag,diag,0]) * trotx(pi) * trotz(pi/4); % 5
-            p06 = p11 * transl([0,0,-0.1]); % way point % 6
+            p06 = p11 * transl([0,0,-0.1]); % Waypoint 6
             
             jointstates = zeros(13*steps,6);
                         
             q1 = self.robot.model.getpos;
-            q2 = self.home; %make it a TR
+            q2 = self.home; % Make it a TR
             qMatrix = jtraj(q1,q2,steps);  
             jointstates(1:steps,:) = qMatrix;
             
             q1 = q2;
-            q2 = self.robot.model.ikcon(p01,q1); %make it a TR
+            q2 = self.robot.model.ikcon(p01,q1); % Make it a TR
             qMatrix = jtraj(q1,q2,steps);   
             jointstates(1+steps:2*steps,:) = qMatrix;
             
-            % cut one
+            % Cut one
             tfMatrix = ctraj(p01,p02,steps);   
             for i = 1:steps
                 if self.EStopCheck()
@@ -323,19 +341,19 @@ classdef SlicerBot < handle
             end
             jointstates(1+2*steps:3*steps,:) = qMatrix;
             
-            % way point
+            % Waypoint
             q1 = q2;
-            q2 = self.robot.model.ikcon(p03,q2); %make it a TR
+            q2 = self.robot.model.ikcon(p03,q2); % Make it a TR
             qMatrix = jtraj(q1,q2,steps);    
             jointstates(1+3*steps:4*steps,:) = qMatrix;
             
-            % way point
+            % Waypoint
             q1 = q2;
-            q2 = self.robot.model.ikcon(p10,q2); %make it a TR
+            q2 = self.robot.model.ikcon(p10,q2); % Make it a TR
             qMatrix = jtraj(q1,q2,steps); 
             jointstates(1+4*steps:5*steps,:) = qMatrix;
             
-            % cut two
+            % Cut two
             tfMatrix = ctraj(p10,p11,steps);   
             for i = 1:steps
                 if self.EStopCheck()
@@ -346,18 +364,18 @@ classdef SlicerBot < handle
             end
             jointstates(1+5*steps:6*steps,:) = qMatrix;
             
-            % way point
+            % Waypoint
             q1 = q2;
-            q2 = self.robot.model.ikcon(p06,q1); %make it a TR
+            q2 = self.robot.model.ikcon(p06,q1); % Make it a TR
             qMatrix = jtraj(q1,q2,steps);    
             jointstates(1+6*steps:7*steps,:) = qMatrix;
             
             q1 = q2;
-            q2 = self.robot.model.ikcon(p05,q1); %make it a TR
+            q2 = self.robot.model.ikcon(p05,q1); % Make it a TR
             qMatrix = jtraj(q1,q2,steps);  
             jointstates(1+7*steps:8*steps,:) = qMatrix;
             
-            % cut three
+            % Cut three
             tfMatrix = ctraj(p05,p04,steps);   
             for i = 1:steps
                 if self.EStopCheck()
@@ -368,19 +386,19 @@ classdef SlicerBot < handle
             end
             jointstates(1+8*steps:9*steps,:) = qMatrix;
             
-            % way point
+            % Waypoint
             q1 = q2;
-            q2 = self.robot.model.ikcon(p09,q1); %make it a TR
+            q2 = self.robot.model.ikcon(p09,q1); % Make it a TR
             qMatrix = jtraj(q1,q2,steps);  
             jointstates(1+9*steps:10*steps,:) = qMatrix;
             
-            % way point
+            % Waypoint
             q1 = q2;
-            q2 = self.robot.model.ikcon(p07,q1); %make it a TR
+            q2 = self.robot.model.ikcon(p07,q1); % Make it a TR
             qMatrix = jtraj(q1,q2,steps);  
             jointstates(1+10*steps:11*steps,:) = qMatrix;
             
-            % cut four
+            % Cut four
             tfMatrix = ctraj(p07,p08,steps);   
             for i = 1:steps
                 if self.EStopCheck()
@@ -391,14 +409,14 @@ classdef SlicerBot < handle
             end
             jointstates(1+11*steps:12*steps,:) = qMatrix;
             
-            % home
+            % Home
             q1 = q2;
             q2 = self.home; %make it a TR
             qMatrix = jtraj(q1,q2,steps);   
             jointstates(1+12*steps:13*steps,:) = qMatrix;
         end
     
-        % step through slicing procedure
+        % Step through slicing procedure
         function stepSlicing(self,qMatrix,cutter)
             for i = 1:length(qMatrix)
                 if self.EStopCheck()
@@ -411,7 +429,7 @@ classdef SlicerBot < handle
                     drawnow()
                     return
                 else
-                self.cutter.model.base = ee; %* transl(self.cutteroffset); 
+                self.cutter.model.base = ee; 
                 self.cutter.model.animate(0)
                 end
                 drawnow();
